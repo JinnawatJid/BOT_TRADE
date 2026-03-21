@@ -7,11 +7,12 @@ def run_backtest():
     cerebro = bt.Cerebro()
 
     # 2. Add the Data Feeds for Multiple Assets
-    symbols = ['BTC_USDT', 'ETH_USDT', 'SOL_USDT', 'BNB_USDT']
+    # Back to Single Asset (BTC) but on the 4h Timeframe for statistical significance
+    symbols = ['BTC_USDT']
     for sym in symbols:
         data = bt.feeds.GenericCSVData(
-            dataname=f'data/{sym}_1d.csv',
-            name=sym, # Name the data feed so the strategy knows which is which
+            dataname=f'data/{sym}_4h.csv',
+            name=f'{sym}_4h', # Name the data feed so the strategy knows which is which
             datetime=0,
             open=1,
             high=2,
@@ -19,8 +20,8 @@ def run_backtest():
             close=4,
             volume=5,
             openinterest=-1,
-            dtformat=('%Y-%m-%d'),
-            # Ensure all data aligns correctly. Start from 2021 where all 4 coins have data.
+            dtformat=('%Y-%m-%d %H:%M:%S'), # 4h format includes time
+            # Start from 2021 to keep comparison similar to daily chart tests
             fromdate=datetime.datetime(2021, 1, 1),
         )
         cerebro.adddata(data)

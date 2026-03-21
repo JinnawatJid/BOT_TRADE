@@ -10,11 +10,11 @@ def run_optimizer():
     # or let it default if your system handles it well. We'll use 1 for stability here.
     cerebro = bt.Cerebro(maxcpus=1, optreturn=False)
 
-    # 2. Add the Data Feed (Focusing on BTC for optimization)
+    # 2. Add the Data Feed (Focusing on BTC for optimization on 4h timeframe)
     # Using full history to get better backtest coverage
     data = bt.feeds.GenericCSVData(
-        dataname='data/BTC_USDT_1d.csv',
-        name='BTC_USDT',
+        dataname='data/BTC_USDT_4h.csv',
+        name='BTC_USDT_4h',
         datetime=0,
         open=1,
         high=2,
@@ -22,21 +22,21 @@ def run_optimizer():
         close=4,
         volume=5,
         openinterest=-1,
-        dtformat=('%Y-%m-%d'),
+        dtformat=('%Y-%m-%d %H:%M:%S'), # 4h format includes time
     )
     cerebro.adddata(data)
 
-    # 3. Add the Strategy with Optimization Parameters
-    # Instead of addstrategy, we use optstrategy
-    # We will test fast_period from 10 to 30 (steps of 5)
-    # and slow_period from 40 to 80 (steps of 10)
-    print("Sweeping Fast EMA: 10 to 30 (step 5)")
-    print("Sweeping Slow EMA: 40 to 80 (step 10)")
+    # 3. Add the Strategy with Optimization Parameters for 4h Timeframe
+    # On a 4h chart, the number of bars is 6x the daily bars.
+    # Therefore, EMA values should generally be larger to capture similar absolute time trends,
+    # or keep them somewhat similar to capture faster micro-trends.
+    print("Sweeping Fast EMA: 10 to 50 (step 10)")
+    print("Sweeping Slow EMA: 50 to 200 (step 30)")
 
     cerebro.optstrategy(
         EmaAtrStrategy,
-        fast_period=range(10, 31, 5),    # [10, 15, 20, 25, 30]
-        slow_period=range(40, 81, 10),   # [40, 50, 60, 70, 80]
+        fast_period=range(10, 51, 10),    # [10, 20, 30, 40, 50]
+        slow_period=range(50, 201, 30),   # [50, 80, 110, 140, 170, 200]
         # Keep others constant for this test.
         # Ensure we are simulating an ALL-IN strategy on a SINGLE asset for optimization
         # (Since we are passing 1 asset, 0.95 means 95% allocation)

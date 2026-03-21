@@ -148,3 +148,28 @@ To maintain consistency and rigorous scientific standards across all future expe
         *   **Sharpe Ratio:** 0.6641
         *   **Final Portfolio Value / ROI:** $44,521 (+345%)
 *   **Conclusion & Next Steps:** The optimizer proved that our arbitrary 20/50 pairing was significantly sub-optimal (which only had a Win Rate of ~33% and Sharpe of 0.55). A **10/60 EMA Crossover** reacts faster to trend beginnings (Fast 10) but is more patient with the underlying macro trend (Slow 60). This pairing pushed the Sharpe Ratio to 0.75 and the Win Rate to nearly 48% while keeping Maximum Drawdown at a very comfortable 23.8%. The next step is to update `main.py` and `strategies/ema_atr_strategy.py` to use these mathematically optimal 10/60 parameters as the new permanent baseline for BTC.
+
+---
+
+## Experiment 7: Statistical Significance via Lower Timeframe (4h)
+**Date:** Statistical Validation Phase
+**Strategy:** EMA Crossover + ATR Trailing Stop
+**Parameters:** Fast EMA [10-50], Slow EMA [50-200], ATR(14, 2.0x)
+**Position Sizing:** 95% of available cash (All-in Spot)
+**Assets Traded:** BTC/USDT (4h Timeframe)
+
+*   **Hypothesis/Logic:** While Experiment 6 yielded excellent metrics (Sharpe 0.75, Win Rate 47%), the absolute trade count was extremely low (~24 trades in 6 years). From an Industry Standard perspective, this is a dangerous "small sample size" anomaly that risks curve-fitting and leads to highly inefficient capital utilization. By shifting from a 1d (Daily) chart to a 4h (4-Hour) chart, we multiply the number of analyzable candles by 6, allowing the system to capture micro-trends, drastically increasing the Trade Count to ensure statistical confidence.
+*   **Results (Top Parameter Sets Discovered on 4h):**
+    *   **#1 Best Risk-Adjusted (Highest Sharpe): Fast EMA 30 / Slow EMA 50**
+        *   **Total Trades:** 99
+        *   **Win Rate:** 43.4%
+        *   **Max Drawdown:** 41.47%
+        *   **Sharpe Ratio:** 0.6668
+        *   **Final Portfolio Value / ROI:** $35,820 (+258%)
+    *   **#2 Safest Drawdown & Highest Win Rate: Fast EMA 50 / Slow EMA 140**
+        *   **Total Trades:** 40
+        *   **Win Rate:** 55.0%
+        *   **Max Drawdown:** 27.25%
+        *   **Sharpe Ratio:** 0.6473
+        *   **Final Portfolio Value / ROI:** $28,694 (+186%)
+*   **Conclusion & Next Steps:** The 4h timeframe experiment was a massive success for statistical validity. The 30/50 pairing executed 99 trades (almost exactly hitting the 100+ industry standard benchmark for statistical significance) while maintaining a highly profitable 258% return. However, its 41% drawdown is slightly aggressive. Alternatively, the 50/140 pairing provides a spectacular 55% Win Rate (very rare for trend following) with a much safer 27% drawdown across 40 trades. The next step is to update `main.py` and `strategies/ema_atr_strategy.py` to utilize the new 4h dataset and the 50/140 parameters as our new high-frequency baseline (prioritizing the safe drawdown and high win rate).
