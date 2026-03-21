@@ -56,6 +56,7 @@ def run_optimizer():
     cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe')
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
     cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')
+    cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trades')
     cerebro.addanalyzer(bt.analyzers.TimeReturn, _name='timereturn') # Needed to accurately track total equity growth per run independently
 
     # 6. Run the optimization
@@ -81,6 +82,13 @@ def run_optimizer():
             drawdown_analysis = strategy.analyzers.drawdown.get_analysis()
             max_dd = drawdown_analysis.max.drawdown
 
+            # Extract Trade data
+            trades_analysis = strategy.analyzers.trades.get_analysis()
+            total_trades = trades_analysis.total.total if 'total' in trades_analysis and 'total' in trades_analysis.total else 0
+            win_rate = 0.0
+            if total_trades > 0 and 'won' in trades_analysis and 'total' in trades_analysis.won:
+                win_rate = (trades_analysis.won.total / total_trades) * 100
+
             # Calculate accurate final return for this specific strategy run
             # because strategy.broker.getvalue() returns the LAST run's value for all of them
             returns_analysis = strategy.analyzers.returns.get_analysis()
@@ -95,6 +103,8 @@ def run_optimizer():
                 'slow': slow,
                 'sharpe': sharpe,
                 'max_dd': max_dd,
+                'total_trades': total_trades,
+                'win_rate': win_rate,
                 'final_value': final_value,
                 'roi_pct': roi_pct
             })
@@ -103,10 +113,10 @@ def run_optimizer():
     sorted_results = sorted(results_list, key=lambda x: (x['sharpe'], x['roi_pct']), reverse=True)
 
     # Print top 10 results
-    print(f"{'Fast EMA':<10} | {'Slow EMA':<10} | {'ROI (%)':<10} | {'Max DD (%)':<12} | {'Sharpe':<10} | {'Final Value':<15}")
-    print("-" * 75)
+    print(f"{'Fast EMA':<9} | {'Slow EMA':<9} | {'Trades':<7} | {'Win%':<7} | {'ROI (%)':<9} | {'Max DD (%)':<11} | {'Sharpe':<8} | {'Final Value':<15}")
+    print("-" * 95)
     for res in sorted_results[:10]:
-        print(f"{res['fast']:<10} | {res['slow']:<10} | {res['roi_pct']:<10.2f} | {res['max_dd']:<12.2f} | {res['sharpe']:<10.4f} | ${res['final_value']:<15.2f}")
+        print(f"{res['fast']:<9} | {res['slow']:<9} | {res['total_trades']:<7} | {res['win_rate']:<7.1f} | {res['roi_pct']:<9.2f} | {res['max_dd']:<11.2f} | {res['sharpe']:<8.4f} | ${res['final_value']:<15.2f}")
 
 if __name__ == '__main__':
     run_optimizer()
