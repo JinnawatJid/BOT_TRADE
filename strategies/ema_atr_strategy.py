@@ -9,7 +9,7 @@ class EmaAtrStrategy(bt.Strategy):
         ('slow_period', 50),
         ('atr_period', 14),
         ('atr_multiplier', 2.0),
-        ('risk_per_trade_pct', 0.02), # 2% risk per trade
+        ('risk_per_trade_pct', 0.95), # Allocate 95% of equity per trade (All-in Spot approach)
     )
 
     def __init__(self):
@@ -113,19 +113,19 @@ class EmaAtrStrategy(bt.Strategy):
                 # Risk = (Entry - Stop Loss) -> ATR * Multiplier
                 # Size = Risk per trade / (ATR * Multiplier)
 
-                # Use current equity
-                equity = self.broker.getvalue()
-                risk_amount = equity * self.params.risk_per_trade_pct
-                risk_per_coin = self.atr[0] * self.params.atr_multiplier
+                # Allocate based on a percentage of current equity
+                # Instead of risking 2% based on ATR (which results in small sizes),
+                # we allocate 95% of our available cash to maximize capital efficiency
+                cash = self.broker.get_cash()
+                allocation = cash * self.params.risk_per_trade_pct
 
-                if risk_per_coin > 0:
-                    size = risk_amount / risk_per_coin
-                    # Check if we have enough cash (simplified, broker does strict check)
+                # Determine size based on the current close price
+                size = allocation / self.dataclose[0]
 
-                    # Keep track of the created order to avoid a 2nd order
+                if size > 0:
                     self.order = self.buy(size=size)
                 else:
-                    self.log('Cannot calculate position size (ATR too small)')
+                    self.log('Not enough cash to buy')
 
         else:
             # We are already in the market
