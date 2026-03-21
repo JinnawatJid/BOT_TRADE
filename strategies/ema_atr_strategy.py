@@ -6,7 +6,7 @@ class EmaAtrStrategy(bt.Strategy):
     """
     params = (
         ('fast_period', 50),
-        ('slow_period', 140),
+        ('slow_period', 110),
         ('atr_period', 14),
         ('atr_multiplier', 2.0),
         ('risk_per_trade_pct', 0.95), # Will allocate this total percentage across all assets
