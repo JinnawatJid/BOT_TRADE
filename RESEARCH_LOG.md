@@ -59,3 +59,21 @@ This document serves as our "laboratory notebook" for tracking experiments with 
     *   Sharpe Ratio: 0.48
     *   Final Portfolio Value: $22,307 (+123%)
 *   **Conclusion:** This is a massive improvement in absolute return. The portfolio grew by 123% (ending over $22k), bringing it much closer to standard crypto expectations. The Sharpe Ratio also improved to nearly 0.5. The tradeoff is a higher, but expected, Max Drawdown (31.78%), which is standard for a fully invested crypto portfolio. The Profit Factor of 1.99 shows the strategy remains fundamentally sound and highly profitable even when scaled up.
+
+---
+
+## Experiment 4: ADX Trend Filter (Sideways Avoidance)
+**Date:** Adding Filters
+**Strategy:** EMA Crossover (20/50) + ADX Filter (>25) + ATR Trailing Stop (14 period, 2.0x)
+**Position Sizing:** 95% of available cash allocated per trade.
+
+*   **Logic:** To combat the high drawdown from false signals in sideways markets (whipsaws), we introduced an ADX filter (14-period). The strategy will only trigger a BUY signal if the EMA crosses over AND the ADX is > 25, meaning a strong trend is already established.
+*   **Results:**
+    *   Total Trades: 6
+    *   Win Rate: 50.00% (3 won, 3 lost)
+    *   Profit Factor: 2.09
+    *   Max Drawdown: 21.87%
+    *   Sharpe Ratio: 0.21
+    *   Final Portfolio Value: $12,409 (+24%)
+*   **Conclusion:** The ADX filter worked *too well* at filtering out trades. While it successfully boosted the Win Rate to 50% and lowered the Max Drawdown significantly (from 31% to 21%), it caused the bot to miss the initial explosive breakouts of massive trends (because ADX lags and is often < 25 at the very bottom of a crossover). As a result, the total return plummeted back to +24%.
+*   **Next Steps:** Using a strict ADX > 25 requirement on an already lagging indicator (EMA Crossover) causes us to enter trades far too late. We should likely remove the ADX filter from the entry conditions or find a leading indicator for volume/momentum instead.

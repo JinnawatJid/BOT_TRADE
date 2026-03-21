@@ -10,6 +10,8 @@ class EmaAtrStrategy(bt.Strategy):
         ('atr_period', 14),
         ('atr_multiplier', 2.0),
         ('risk_per_trade_pct', 0.95), # Allocate 95% of equity per trade (All-in Spot approach)
+        ('adx_period', 14),
+        ('adx_threshold', 25), # ADX must be above 25 to consider it a strong trend
     )
 
     def __init__(self):
@@ -30,6 +32,14 @@ class EmaAtrStrategy(bt.Strategy):
         )
         # Hide ATR from the plot to reduce clutter
         self.atr.plotinfo.plot = False
+
+        # Trend strength indicator (ADX)
+        self.dmi = bt.indicators.DirectionalMovementIndex(
+            self.datas[0], period=self.params.adx_period
+        )
+        self.adx = self.dmi.adx
+        # Hide ADX from the plot to reduce clutter
+        self.dmi.plotinfo.plot = False
 
         # Crossover signal
         self.crossover = bt.indicators.CrossOver(self.fast_ema, self.slow_ema)
@@ -104,9 +114,9 @@ class EmaAtrStrategy(bt.Strategy):
         if not self.position:
 
             # Not yet ... we MIGHT BUY if ...
-            if self.crossover > 0:
-                # Fast EMA crosses above Slow EMA -> BUY SIGNAL
-                self.log('BUY CREATE, %.2f' % self.dataclose[0])
+            # Fast EMA crosses above Slow EMA AND ADX shows strong trend
+            if self.crossover[0] > 0 and self.adx[0] > self.params.adx_threshold:
+                self.log('BUY CREATE (Trend Confirmed by ADX), %.2f' % self.dataclose[0])
 
                 # Calculate Position Size based on Risk
                 # Risk per trade = Capital * Risk%
@@ -142,6 +152,6 @@ class EmaAtrStrategy(bt.Strategy):
             if self.dataclose[0] < self.stop_loss_price:
                 self.log(f'STOP LOSS HIT: Close {self.dataclose[0]:.2f} < SL {self.stop_loss_price:.2f}. SELL CREATE.')
                 self.order = self.sell(size=self.position.size)
-            elif self.crossover < 0:
+            elif self.crossover[0] < 0:
                 self.log('SELL CREATE (Trend Reversal), %.2f' % self.dataclose[0])
                 self.order = self.sell(size=self.position.size)
