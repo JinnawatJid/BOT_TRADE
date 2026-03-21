@@ -5,8 +5,8 @@ class EmaAtrStrategy(bt.Strategy):
     Trend Following Strategy using EMA Crossover and ATR Trailing Stop Loss.
     """
     params = (
-        ('fast_period', 20),
-        ('slow_period', 50),
+        ('fast_period', 10),
+        ('slow_period', 60),
         ('atr_period', 14),
         ('atr_multiplier', 2.0),
         ('risk_per_trade_pct', 0.95), # Will allocate this total percentage across all assets

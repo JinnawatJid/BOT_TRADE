@@ -109,11 +109,15 @@ This document serves as our "laboratory notebook" for tracking experiments with 
 **Position Sizing:** 95% of available cash (All-in Spot)
 
 *   **Logic:** Instead of randomly guessing EMA periods and hoping they work, we built an `optimizer.py` script. This tool leverages Backtrader's multi-run capabilities to sweep through multiple combinations of Fast EMA (10 to 30) and Slow EMA (40 to 80). The goal is to mathematically determine the "Robust Parameter Zone" for BTC that yields the best risk-adjusted return (Sharpe Ratio).
-*   **Results (Top Parameter Set Discovered):**
-    *   **Fast EMA:** 10
-    *   **Slow EMA:** 60
-    *   **Max Drawdown:** 23.80%
-    *   **Sharpe Ratio:** 0.7520 (Significant improvement)
-    *   **Final Portfolio Value:** $12,154 (Return metrics impacted by exact start dates in the optimizer vs `main.py`, but relative ranking remains accurate).
-*   **Conclusion:** The optimizer proved that our arbitrary 20/50 pairing was sub-optimal. A **10/60 EMA Crossover** reacts faster to trend beginnings (Fast 10) but is more patient with the underlying macro trend (Slow 60). This pairing pushed the Sharpe Ratio to 0.75 (a massive leap toward the >1.0 industry standard) while keeping Maximum Drawdown at a very comfortable 23.8%.
+*   **Results (Top Parameter Sets Discovered):**
+    *   **#1 Best Risk-Adjusted (Highest Sharpe):** Fast EMA 10 / Slow EMA 60.
+        - Sharpe: 0.7520
+        - Max Drawdown: 23.80%
+        - ROI: 265% (Final Value: $36,524)
+    *   **#2 Highest Absolute Return:** Fast EMA 10 / Slow EMA 50.
+        - Sharpe: 0.6641
+        - Max Drawdown: 29.12%
+        - ROI: 345% (Final Value: $44,521)
+    *   *Note: Original 20/50 parameters yielded a Sharpe of only 0.55 and ROI of 125%.*
+*   **Conclusion:** The optimizer proved that our arbitrary 20/50 pairing was significantly sub-optimal. A **10/60 EMA Crossover** reacts faster to trend beginnings (Fast 10) but is more patient with the underlying macro trend (Slow 60). This pairing pushed the Sharpe Ratio to 0.75 while keeping Maximum Drawdown at a very comfortable 23.8%. Alternatively, if a fund is willing to accept ~30% drawdown, the 10/50 pairing generates a massive 345% return.
 *   **Next Steps:** Update `main.py` and `strategies/ema_atr_strategy.py` to use these mathematically optimal 10/60 parameters as the new baseline for BTC.

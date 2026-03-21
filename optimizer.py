@@ -56,10 +56,9 @@ def run_optimizer():
     cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe')
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
     cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')
+    cerebro.addanalyzer(bt.analyzers.TimeReturn, _name='timereturn') # Needed to accurately track total equity growth per run independently
 
     # 6. Run the optimization
-    # Suppress normal print output from the strategy by disabling its log function
-    # (We could modify the strategy to respect a 'printlog' param, but for now we just run it)
     print("Running simulations... This may take a moment.")
     optimized_runs = cerebro.run()
 
@@ -82,11 +81,13 @@ def run_optimizer():
             drawdown_analysis = strategy.analyzers.drawdown.get_analysis()
             max_dd = drawdown_analysis.max.drawdown
 
+            # Calculate accurate final return for this specific strategy run
+            # because strategy.broker.getvalue() returns the LAST run's value for all of them
             returns_analysis = strategy.analyzers.returns.get_analysis()
-            total_return = returns_analysis['rtot'] # Log return, we can use it for sorting
-
-            # Get final portfolio value
-            final_value = strategy.broker.getvalue()
+            # 'rtot' is the total compound return (log return). To get simple percentage:
+            import math
+            roi_pct = (math.exp(returns_analysis['rtot']) - 1) * 100
+            final_value = start_cash * math.exp(returns_analysis['rtot'])
 
             # Store result
             results_list.append({
@@ -95,11 +96,11 @@ def run_optimizer():
                 'sharpe': sharpe,
                 'max_dd': max_dd,
                 'final_value': final_value,
-                'roi_pct': ((final_value - start_cash) / start_cash) * 100
+                'roi_pct': roi_pct
             })
 
-    # Sort results primarily by Final Value (ROI), then by Sharpe Ratio
-    sorted_results = sorted(results_list, key=lambda x: (x['roi_pct'], x['sharpe']), reverse=True)
+    # Sort results primarily by Sharpe Ratio (Industry Standard for robust optimization), then by ROI
+    sorted_results = sorted(results_list, key=lambda x: (x['sharpe'], x['roi_pct']), reverse=True)
 
     # Print top 10 results
     print(f"{'Fast EMA':<10} | {'Slow EMA':<10} | {'ROI (%)':<10} | {'Max DD (%)':<12} | {'Sharpe':<10} | {'Final Value':<15}")
