@@ -84,8 +84,16 @@ def run_backtest():
     # 8. Plot the result and save to file (Matplotlib setup fix for headless)
     try:
         import matplotlib.pyplot as plt
+
+        # Adjust Matplotlib figure size globally to make the chart bigger and easier to read
+        plt.rcParams['figure.figsize'] = [15, 8]
+        plt.rcParams['figure.dpi'] = 100
+
         print("\nSaving plot to backtest_result.png...")
-        fig = cerebro.plot(style='candlestick', iplot=False)[0][0]
+
+        # Turn off volume overlay on the main chart to reduce clutter
+        # We also pass volume=False to the plot
+        fig = cerebro.plot(style='candlestick', iplot=False, volume=False)[0][0]
         fig.savefig('backtest_result.png')
         print("Plot saved successfully.")
     except Exception as e:

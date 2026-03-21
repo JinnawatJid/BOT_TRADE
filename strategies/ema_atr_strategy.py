@@ -5,8 +5,8 @@ class EmaAtrStrategy(bt.Strategy):
     Trend Following Strategy using EMA Crossover and ATR Trailing Stop Loss.
     """
     params = (
-        ('fast_period', 50),
-        ('slow_period', 200),
+        ('fast_period', 20),
+        ('slow_period', 50),
         ('atr_period', 14),
         ('atr_multiplier', 2.0),
         ('risk_per_trade_pct', 0.02), # 2% risk per trade
@@ -28,9 +28,13 @@ class EmaAtrStrategy(bt.Strategy):
         self.atr = bt.indicators.AverageTrueRange(
             self.datas[0], period=self.params.atr_period
         )
+        # Hide ATR from the plot to reduce clutter
+        self.atr.plotinfo.plot = False
 
         # Crossover signal
         self.crossover = bt.indicators.CrossOver(self.fast_ema, self.slow_ema)
+        # Hide the Crossover 1/-1 line from the plot to reduce clutter
+        self.crossover.plotinfo.plot = False
 
         # To keep track of pending orders and buy price/commission
         self.order = None
