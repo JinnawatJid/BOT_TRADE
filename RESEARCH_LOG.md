@@ -99,3 +99,21 @@ This document serves as our "laboratory notebook" for tracking experiments with 
     1.  **Over-Optimization on BTC:** The EMA (20/50) and ATR (14, 2.0x) parameters were originally hand-tuned specifically for Bitcoin's volatility profile. Applying these exact same parameters blindly to highly volatile altcoins like SOL and ETH resulted in the bot constantly getting whipsawed and stopped out prematurely.
     2.  **High Correlation:** Crypto assets are highly correlated to BTC. When BTC goes sideways, the altcoins go sideways but with *higher volatility*, triggering even more false breakouts.
 *   **Next Steps:** A blanket parameter approach does not work across a diverse portfolio. We either need to run Parameter Sweeping (Grid Search) for *each individual asset*, or return to trading a single major asset (BTC) using the optimized baseline.
+
+---
+
+## Experiment 6: Parameter Sweeping / Grid Search (Industry Standard)
+**Date:** Optimization
+**Strategy:** EMA Crossover + ATR Trailing Stop (14 period, 2.0x)
+**Asset:** BTC/USDT (Single Asset Baseline)
+**Position Sizing:** 95% of available cash (All-in Spot)
+
+*   **Logic:** Instead of randomly guessing EMA periods and hoping they work, we built an `optimizer.py` script. This tool leverages Backtrader's multi-run capabilities to sweep through multiple combinations of Fast EMA (10 to 30) and Slow EMA (40 to 80). The goal is to mathematically determine the "Robust Parameter Zone" for BTC that yields the best risk-adjusted return (Sharpe Ratio).
+*   **Results (Top Parameter Set Discovered):**
+    *   **Fast EMA:** 10
+    *   **Slow EMA:** 60
+    *   **Max Drawdown:** 23.80%
+    *   **Sharpe Ratio:** 0.7520 (Significant improvement)
+    *   **Final Portfolio Value:** $12,154 (Return metrics impacted by exact start dates in the optimizer vs `main.py`, but relative ranking remains accurate).
+*   **Conclusion:** The optimizer proved that our arbitrary 20/50 pairing was sub-optimal. A **10/60 EMA Crossover** reacts faster to trend beginnings (Fast 10) but is more patient with the underlying macro trend (Slow 60). This pairing pushed the Sharpe Ratio to 0.75 (a massive leap toward the >1.0 industry standard) while keeping Maximum Drawdown at a very comfortable 23.8%.
+*   **Next Steps:** Update `main.py` and `strategies/ema_atr_strategy.py` to use these mathematically optimal 10/60 parameters as the new baseline for BTC.

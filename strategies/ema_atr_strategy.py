@@ -10,6 +10,7 @@ class EmaAtrStrategy(bt.Strategy):
         ('atr_period', 14),
         ('atr_multiplier', 2.0),
         ('risk_per_trade_pct', 0.95), # Will allocate this total percentage across all assets
+        ('printlog', True),           # Flag to toggle logging off during optimization
     )
 
     def __init__(self):
@@ -71,9 +72,10 @@ class EmaAtrStrategy(bt.Strategy):
 
         self.log(f'OPERATION PROFIT [{trade.data._name}], GROSS {trade.pnl:.2f}, NET {trade.pnlcomm:.2f}', dt=trade.data.datetime.date(0))
 
-    def log(self, txt, dt=None):
-        dt = dt or self.datas[0].datetime.date(0)
-        print('%s, %s' % (dt.isoformat(), txt))
+    def log(self, txt, dt=None, doprint=False):
+        if self.params.printlog or doprint:
+            dt = dt or self.datas[0].datetime.date(0)
+            print('%s, %s' % (dt.isoformat(), txt))
 
     def next(self):
         # In a portfolio, we loop through all available data feeds
