@@ -9,149 +9,125 @@ class EmaAtrStrategy(bt.Strategy):
         ('slow_period', 50),
         ('atr_period', 14),
         ('atr_multiplier', 2.0),
-        ('risk_per_trade_pct', 0.95), # Allocate 95% of equity per trade (All-in Spot approach)
-        ('adx_period', 14),
-        ('adx_threshold', 25), # ADX must be above 25 to consider it a strong trend
+        ('risk_per_trade_pct', 0.95), # Will allocate this total percentage across all assets
     )
 
     def __init__(self):
-        # Data feeds
-        self.dataclose = self.datas[0].close
-        self.datahigh = self.datas[0].high
-        self.datalow = self.datas[0].low
+        # Create dictionaries to hold indicators and state per data feed
+        self.inds = dict()
+        self.orders = dict()
+        self.stop_loss_prices = dict()
 
-        # Indicators
-        self.fast_ema = bt.indicators.ExponentialMovingAverage(
-            self.datas[0], period=self.params.fast_period
-        )
-        self.slow_ema = bt.indicators.ExponentialMovingAverage(
-            self.datas[0], period=self.params.slow_period
-        )
-        self.atr = bt.indicators.AverageTrueRange(
-            self.datas[0], period=self.params.atr_period
-        )
-        # Hide ATR from the plot to reduce clutter
-        self.atr.plotinfo.plot = False
+        for d in self.datas:
+            self.orders[d] = None
+            self.stop_loss_prices[d] = None
 
-        # Trend strength indicator (ADX)
-        self.dmi = bt.indicators.DirectionalMovementIndex(
-            self.datas[0], period=self.params.adx_period
-        )
-        self.adx = self.dmi.adx
-        # Hide ADX from the plot to reduce clutter
-        self.dmi.plotinfo.plot = False
+            # Indicators per feed
+            fast_ema = bt.indicators.ExponentialMovingAverage(d, period=self.params.fast_period)
+            slow_ema = bt.indicators.ExponentialMovingAverage(d, period=self.params.slow_period)
 
-        # Crossover signal
-        self.crossover = bt.indicators.CrossOver(self.fast_ema, self.slow_ema)
-        # Hide the Crossover 1/-1 line from the plot to reduce clutter
-        self.crossover.plotinfo.plot = False
+            atr = bt.indicators.AverageTrueRange(d, period=self.params.atr_period)
+            atr.plotinfo.plot = False
 
-        # To keep track of pending orders and buy price/commission
-        self.order = None
-        self.buyprice = None
-        self.buycomm = None
-        self.stop_loss_price = None
+            crossover = bt.indicators.CrossOver(fast_ema, slow_ema)
+            crossover.plotinfo.plot = False
+
+            # Store in dict
+            self.inds[d] = {
+                'fast_ema': fast_ema,
+                'slow_ema': slow_ema,
+                'atr': atr,
+                'crossover': crossover
+            }
 
     def notify_order(self, order):
         if order.status in [order.Submitted, order.Accepted]:
-            # Buy/Sell order submitted/accepted to/by broker - Nothing to do
             return
 
-        # Check if an order has been completed
-        # Attention: broker could reject order if not enough cash
+        d = order.data
+
         if order.status in [order.Completed]:
             if order.isbuy():
-                self.log(
-                    'BUY EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
-                    (order.executed.price,
-                     order.executed.value,
-                     order.executed.comm))
-
-                self.buyprice = order.executed.price
-                self.buycomm = order.executed.comm
+                self.log(f'BUY EXECUTED [{d._name}], Price: {order.executed.price:.2f}, Cost: {order.executed.value:.2f}, Comm {order.executed.comm:.2f}', dt=d.datetime.date(0))
 
                 # Initial Stop Loss
-                self.stop_loss_price = self.buyprice - (self.atr[0] * self.params.atr_multiplier)
-                self.log(f'INITIAL STOP LOSS SET: {self.stop_loss_price:.2f}')
+                atr = self.inds[d]['atr'][0]
+                self.stop_loss_prices[d] = order.executed.price - (atr * self.params.atr_multiplier)
+                self.log(f'INITIAL STOP LOSS SET [{d._name}]: {self.stop_loss_prices[d]:.2f}', dt=d.datetime.date(0))
 
             else:  # Sell
-                self.log('SELL EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
-                         (order.executed.price,
-                          order.executed.value,
-                          order.executed.comm))
-                # Reset stop loss
-                self.stop_loss_price = None
-
-            self.bar_executed = len(self)
+                self.log(f'SELL EXECUTED [{d._name}], Price: {order.executed.price:.2f}, Cost: {order.executed.value:.2f}, Comm {order.executed.comm:.2f}', dt=d.datetime.date(0))
+                self.stop_loss_prices[d] = None
 
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            self.log('Order Canceled/Margin/Rejected')
+            self.log(f'Order Canceled/Margin/Rejected [{d._name}]', dt=d.datetime.date(0))
 
-        # Write down: no pending order
-        self.order = None
+        # Reset order tracking for this data feed
+        self.orders[d] = None
 
     def notify_trade(self, trade):
         if not trade.isclosed:
             return
 
-        self.log('OPERATION PROFIT, GROSS %.2f, NET %.2f' %
-                 (trade.pnl, trade.pnlcomm))
+        self.log(f'OPERATION PROFIT [{trade.data._name}], GROSS {trade.pnl:.2f}, NET {trade.pnlcomm:.2f}', dt=trade.data.datetime.date(0))
 
     def log(self, txt, dt=None):
-        ''' Logging function fot this strategy'''
         dt = dt or self.datas[0].datetime.date(0)
         print('%s, %s' % (dt.isoformat(), txt))
 
     def next(self):
-        # Simply log the closing price of the series from the reference
-        # self.log('Close, %.2f' % self.dataclose[0])
+        # In a portfolio, we loop through all available data feeds
+        num_assets = len(self.datas)
 
-        # Check if an order is pending ... if yes, we cannot send a 2nd one
-        if self.order:
-            return
+        for d in self.datas:
+            # Skip if data is not mature enough yet
+            if len(d) < self.params.slow_period:
+                continue
 
-        # Check if we are in the market
-        if not self.position:
+            pos = self.getposition(d)
+            ind = self.inds[d]
 
-            # Not yet ... we MIGHT BUY if ...
-            # Fast EMA crosses above Slow EMA AND ADX shows strong trend
-            if self.crossover[0] > 0 and self.adx[0] > self.params.adx_threshold:
-                self.log('BUY CREATE (Trend Confirmed by ADX), %.2f' % self.dataclose[0])
+            # If an order is already pending for this asset, skip
+            if self.orders[d]:
+                continue
 
-                # Calculate Position Size based on Risk
-                # Risk per trade = Capital * Risk%
-                # Risk = (Entry - Stop Loss) -> ATR * Multiplier
-                # Size = Risk per trade / (ATR * Multiplier)
+            if not pos:
+                # We are NOT in the market for this asset
+                if ind['crossover'][0] > 0:
+                    self.log(f'BUY CREATE [{d._name}], Price: {d.close[0]:.2f}', dt=d.datetime.date(0))
 
-                # Allocate based on a percentage of current equity
-                # Instead of risking 2% based on ATR (which results in small sizes),
-                # we allocate 95% of our available cash to maximize capital efficiency
-                cash = self.broker.get_cash()
-                allocation = cash * self.params.risk_per_trade_pct
+                    # Portfolio Position Sizing:
+                    # We allocate equal weight to each asset.
+                    # E.g., if total risk is 95% and we have 4 assets, each asset gets ~23.75% of TOTAL equity.
+                    total_equity = self.broker.getvalue()
+                    allocation_per_asset = (total_equity * self.params.risk_per_trade_pct) / num_assets
 
-                # Determine size based on the current close price
-                size = allocation / self.dataclose[0]
+                    # Ensure we have enough actual cash before buying
+                    cash = self.broker.get_cash()
+                    target_value = min(allocation_per_asset, cash)
 
-                if size > 0:
-                    self.order = self.buy(size=size)
-                else:
-                    self.log('Not enough cash to buy')
+                    size = target_value / d.close[0]
 
-        else:
-            # We are already in the market
+                    if size > 0:
+                        self.orders[d] = self.buy(data=d, size=size)
+                    else:
+                        self.log(f'Not enough cash to buy [{d._name}]', dt=d.datetime.date(0))
 
-            # 1. Update Trailing Stop Loss
-            # Stop Loss moves UP with the price, but never goes down
-            new_stop_loss = self.dataclose[0] - (self.atr[0] * self.params.atr_multiplier)
-            if new_stop_loss > self.stop_loss_price:
-                self.stop_loss_price = new_stop_loss
-                # self.log(f'STOP LOSS MOVED UP TO: {self.stop_loss_price:.2f}')
+            else:
+                # We ARE in the market for this asset
 
-            # 2. Check for Exit Signals
-            # Exit if price drops below Trailing Stop Loss OR if Fast EMA crosses below Slow EMA (Trend Change)
-            if self.dataclose[0] < self.stop_loss_price:
-                self.log(f'STOP LOSS HIT: Close {self.dataclose[0]:.2f} < SL {self.stop_loss_price:.2f}. SELL CREATE.')
-                self.order = self.sell(size=self.position.size)
-            elif self.crossover[0] < 0:
-                self.log('SELL CREATE (Trend Reversal), %.2f' % self.dataclose[0])
-                self.order = self.sell(size=self.position.size)
+                # 1. Update Trailing Stop Loss
+                new_stop_loss = d.close[0] - (ind['atr'][0] * self.params.atr_multiplier)
+
+                if self.stop_loss_prices[d] is None:
+                    self.stop_loss_prices[d] = new_stop_loss
+                elif new_stop_loss > self.stop_loss_prices[d]:
+                    self.stop_loss_prices[d] = new_stop_loss
+
+                # 2. Check for Exit Signals
+                if d.close[0] < self.stop_loss_prices[d]:
+                    self.log(f'STOP LOSS HIT [{d._name}]: Close {d.close[0]:.2f} < SL {self.stop_loss_prices[d]:.2f}. SELL CREATE.', dt=d.datetime.date(0))
+                    self.orders[d] = self.sell(data=d, size=pos.size)
+                elif ind['crossover'][0] < 0:
+                    self.log(f'SELL CREATE (Trend Reversal) [{d._name}], Price: {d.close[0]:.2f}', dt=d.datetime.date(0))
+                    self.orders[d] = self.sell(data=d, size=pos.size)

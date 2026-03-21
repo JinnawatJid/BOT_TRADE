@@ -3,7 +3,8 @@ import pandas as pd
 import time
 import os
 
-def fetch_data(symbol='BTC/USDT', timeframe='1d', since='2020-01-01T00:00:00Z', filename='data/BTC_USDT_1d.csv'):
+def fetch_data(symbol='BTC/USDT', timeframe='1d', since='2020-01-01T00:00:00Z'):
+    filename = f"data/{symbol.replace('/', '_')}_{timeframe}.csv"
     print(f"Fetching {symbol} {timeframe} data from KuCoin starting {since}...")
 
     # Initialize the exchange
@@ -29,19 +30,15 @@ def fetch_data(symbol='BTC/USDT', timeframe='1d', since='2020-01-01T00:00:00Z', 
             # Update 'since' to the last timestamp + 1 ms to avoid fetching the same candle
             since_timestamp = ohlcv[-1][0] + 1
 
-            # Print progress
-            last_date = exchange.iso8601(ohlcv[-1][0])
-            print(f"Fetched up to {last_date}")
-
             # Respect rate limit implicitly handled by ccxt, but adding small sleep just in case
             time.sleep(exchange.rateLimit / 1000)
 
         except Exception as e:
-            print(f"An error occurred: {e}")
+            print(f"An error occurred fetching {symbol}: {e}")
             break
 
     if not all_ohlcv:
-        print("No data fetched.")
+        print(f"No data fetched for {symbol}.")
         return
 
     # Convert to Pandas DataFrame
@@ -58,8 +55,10 @@ def fetch_data(symbol='BTC/USDT', timeframe='1d', since='2020-01-01T00:00:00Z', 
     df = df[['datetime', 'open', 'high', 'low', 'close', 'volume']]
     df.to_csv(filename, index=False)
 
-    print(f"Data saved to {filename}")
-    print(f"Total rows: {len(df)}")
+    print(f"Data saved to {filename} (Total rows: {len(df)})")
 
 if __name__ == "__main__":
-    fetch_data()
+    # Fetch a diversified portfolio of major crypto assets
+    symbols = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT']
+    for symbol in symbols:
+        fetch_data(symbol=symbol)

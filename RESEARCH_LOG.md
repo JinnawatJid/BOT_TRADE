@@ -77,3 +77,25 @@ This document serves as our "laboratory notebook" for tracking experiments with 
     *   Final Portfolio Value: $12,409 (+24%)
 *   **Conclusion:** The ADX filter worked *too well* at filtering out trades. While it successfully boosted the Win Rate to 50% and lowered the Max Drawdown significantly (from 31% to 21%), it caused the bot to miss the initial explosive breakouts of massive trends (because ADX lags and is often < 25 at the very bottom of a crossover). As a result, the total return plummeted back to +24%.
 *   **Next Steps:** Using a strict ADX > 25 requirement on an already lagging indicator (EMA Crossover) causes us to enter trades far too late. We should likely remove the ADX filter from the entry conditions or find a leading indicator for volume/momentum instead.
+
+---
+
+## Experiment 5: Portfolio Diversification (Multi-Asset)
+**Date:** Portfolio Sizing
+**Strategy:** Reverted to Baseline Experiment 3 (EMA 20/50 + ATR Trailing Stop, No ADX).
+**Assets Traded:** BTC/USDT, ETH/USDT, SOL/USDT, BNB/USDT.
+**Timeframe Limit:** 2021 to 2026 (due to SOL data availability).
+**Position Sizing:** Equal weight allocation. 95% of total portfolio equity divided evenly among the 4 assets (~23.75% allocation per asset signal).
+
+*   **Logic:** Instead of over-engineering the strategy with filters (like ADX), we embrace the sideways whipsaws and use "Diversification" to smooth out the equity curve. We run the highly profitable EMA 20/50 strategy across a basket of 4 major crypto assets.
+*   **Results:**
+    *   Total Trades: 54
+    *   Win Rate: 29.63% (16 won, 38 lost)
+    *   Profit Factor: 0.85
+    *   Max Drawdown: 37.86%
+    *   Sharpe Ratio: -0.04
+    *   Final Portfolio Value: $8,951 (-10.5%)
+*   **Conclusion:** The results are highly counterintuitive. Diversification *failed* completely in this scenario, destroying the portfolio. The issue is two-fold:
+    1.  **Over-Optimization on BTC:** The EMA (20/50) and ATR (14, 2.0x) parameters were originally hand-tuned specifically for Bitcoin's volatility profile. Applying these exact same parameters blindly to highly volatile altcoins like SOL and ETH resulted in the bot constantly getting whipsawed and stopped out prematurely.
+    2.  **High Correlation:** Crypto assets are highly correlated to BTC. When BTC goes sideways, the altcoins go sideways but with *higher volatility*, triggering even more false breakouts.
+*   **Next Steps:** A blanket parameter approach does not work across a diverse portfolio. We either need to run Parameter Sweeping (Grid Search) for *each individual asset*, or return to trading a single major asset (BTC) using the optimized baseline.

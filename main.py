@@ -6,24 +6,24 @@ def run_backtest():
     # 1. Create a Cerebro entity
     cerebro = bt.Cerebro()
 
-    # 2. Add the Data Feed
-    # Use standard pandas-compatible CSV feed
-    data = bt.feeds.GenericCSVData(
-        dataname='data/BTC_USDT_1d.csv',
-        # Ensure dates are parsed correctly
-        datetime=0,
-        open=1,
-        high=2,
-        low=3,
-        close=4,
-        volume=5,
-        openinterest=-1,
-        dtformat=('%Y-%m-%d'),
-        # Set start and end dates if needed, else it runs all
-        # fromdate=datetime.datetime(2020, 1, 1),
-        # todate=datetime.datetime(2023, 12, 31),
-    )
-    cerebro.adddata(data)
+    # 2. Add the Data Feeds for Multiple Assets
+    symbols = ['BTC_USDT', 'ETH_USDT', 'SOL_USDT', 'BNB_USDT']
+    for sym in symbols:
+        data = bt.feeds.GenericCSVData(
+            dataname=f'data/{sym}_1d.csv',
+            name=sym, # Name the data feed so the strategy knows which is which
+            datetime=0,
+            open=1,
+            high=2,
+            low=3,
+            close=4,
+            volume=5,
+            openinterest=-1,
+            dtformat=('%Y-%m-%d'),
+            # Ensure all data aligns correctly. Start from 2021 where all 4 coins have data.
+            fromdate=datetime.datetime(2021, 1, 1),
+        )
+        cerebro.adddata(data)
 
     # 3. Add the Strategy
     # Using the EmaAtrStrategy we defined
