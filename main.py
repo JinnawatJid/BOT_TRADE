@@ -7,28 +7,38 @@ def run_backtest():
     cerebro = bt.Cerebro()
 
     # 2. Add the Data Feeds for Multiple Assets
-    # Back to Single Asset (BTC) but on the 4h Timeframe for statistical significance
-    symbols = ['BTC_USDT']
+    # Returning to the Multi-Asset Portfolio on the 4h Timeframe
+    symbols = ['BTC_USDT', 'ETH_USDT', 'SOL_USDT', 'BNB_USDT']
     for sym in symbols:
-        data = bt.feeds.GenericCSVData(
-            dataname=f'data/{sym}_4h.csv',
-            name=f'{sym}_4h', # Name the data feed so the strategy knows which is which
-            datetime=0,
-            open=1,
-            high=2,
-            low=3,
-            close=4,
-            volume=5,
-            openinterest=-1,
-            dtformat=('%Y-%m-%d %H:%M:%S'), # 4h format includes time
-            # Start from 2021 to keep comparison similar to daily chart tests
-            fromdate=datetime.datetime(2021, 1, 1),
-        )
-        cerebro.adddata(data)
+        try:
+            data = bt.feeds.GenericCSVData(
+                dataname=f'data/{sym}_4h.csv',
+                name=f'{sym}_4h', # Name the data feed so the strategy knows which is which
+                datetime=0,
+                open=1,
+                high=2,
+                low=3,
+                close=4,
+                volume=5,
+                openinterest=-1,
+                dtformat=('%Y-%m-%d %H:%M:%S'), # 4h format includes time
+                # Start from 2022 since KuCoin SOL data goes back to roughly mid-2021
+                fromdate=datetime.datetime(2022, 1, 1),
+            )
+            cerebro.adddata(data)
+        except Exception as e:
+            print(f"Skipping {sym} data feed due to error: {e}")
 
-    # 3. Add the Strategy
-    # Using the EmaAtrStrategy we defined
-    cerebro.addstrategy(EmaAtrStrategy)
+    # 3. Add the Strategy with Asset-Specific Optimized Parameters
+    # We pass the best Fast/Slow EMA combinations found by our optimizer for each asset
+    optimized_params = {
+        'BTC_USDT_4h': (50, 110),
+        'ETH_USDT_4h': (40, 50),
+        'SOL_USDT_4h': (40, 170),
+        'BNB_USDT_4h': (30, 170)
+    }
+
+    cerebro.addstrategy(EmaAtrStrategy, asset_parameters=optimized_params)
 
     # 4. Set Broker parameters
     # Set starting cash

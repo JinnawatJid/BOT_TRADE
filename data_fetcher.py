@@ -3,7 +3,7 @@ import pandas as pd
 import time
 import os
 
-def fetch_data(symbol='BTC/USDT', timeframe='4h', since='2020-01-01T00:00:00Z'):
+def fetch_data(symbol='BTC/USDT', timeframe='4h', since='2021-01-01T00:00:00Z'): # Adjusted default start date for altcoins like SOL
     filename = f"data/{symbol.replace('/', '_')}_{timeframe}.csv"
     print(f"Fetching {symbol} {timeframe} data from KuCoin starting {since}...")
 
@@ -58,7 +58,10 @@ def fetch_data(symbol='BTC/USDT', timeframe='4h', since='2020-01-01T00:00:00Z'):
     print(f"Data saved to {filename} (Total rows: {len(df)})")
 
 if __name__ == "__main__":
-    # Fetch BTC/USDT 4h data to increase sample size for optimization
-    symbols = ['BTC/USDT']
+    # Fetch 4h data for a diversified portfolio to perform asset-specific optimization
+    symbols = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT']
     for symbol in symbols:
-        fetch_data(symbol=symbol, timeframe='4h')
+        try:
+            fetch_data(symbol=symbol, timeframe='4h', since='2022-01-01T00:00:00Z') # SOL has issues fetching too far back on KuCoin 4h
+        except Exception as e:
+            print(f"Error for {symbol}: {e}")

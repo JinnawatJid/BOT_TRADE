@@ -5,8 +5,12 @@ class EmaAtrStrategy(bt.Strategy):
     Trend Following Strategy using EMA Crossover and ATR Trailing Stop Loss.
     """
     params = (
-        ('fast_period', 50),
-        ('slow_period', 110),
+        # Instead of global fast/slow periods, we provide a dictionary of params per asset.
+        # Format: {'BTC_USDT_4h': (fast, slow), 'ETH_USDT_4h': (fast, slow), ...}
+        # If a symbol is not in the dict, it falls back to default_periods.
+        ('asset_parameters', {}),
+        ('default_periods', (50, 110)),
+
         ('atr_period', 14),
         ('atr_multiplier', 2.0),
         ('risk_per_trade_pct', 0.95), # Will allocate this total percentage across all assets
@@ -23,9 +27,12 @@ class EmaAtrStrategy(bt.Strategy):
             self.orders[d] = None
             self.stop_loss_prices[d] = None
 
+            # Determine parameters for this specific asset
+            fast_p, slow_p = self.params.asset_parameters.get(d._name, self.params.default_periods)
+
             # Indicators per feed
-            fast_ema = bt.indicators.ExponentialMovingAverage(d, period=self.params.fast_period)
-            slow_ema = bt.indicators.ExponentialMovingAverage(d, period=self.params.slow_period)
+            fast_ema = bt.indicators.ExponentialMovingAverage(d, period=fast_p)
+            slow_ema = bt.indicators.ExponentialMovingAverage(d, period=slow_p)
 
             atr = bt.indicators.AverageTrueRange(d, period=self.params.atr_period)
             atr.plotinfo.plot = False
@@ -38,7 +45,8 @@ class EmaAtrStrategy(bt.Strategy):
                 'fast_ema': fast_ema,
                 'slow_ema': slow_ema,
                 'atr': atr,
-                'crossover': crossover
+                'crossover': crossover,
+                'slow_p': slow_p # Save this for minimum bar checks
             }
 
     def notify_order(self, order):
@@ -82,12 +90,13 @@ class EmaAtrStrategy(bt.Strategy):
         num_assets = len(self.datas)
 
         for d in self.datas:
-            # Skip if data is not mature enough yet
-            if len(d) < self.params.slow_period:
+            ind = self.inds[d]
+
+            # Skip if data is not mature enough yet for this specific asset's slow EMA
+            if len(d) < ind['slow_p']:
                 continue
 
             pos = self.getposition(d)
-            ind = self.inds[d]
 
             # If an order is already pending for this asset, skip
             if self.orders[d]:

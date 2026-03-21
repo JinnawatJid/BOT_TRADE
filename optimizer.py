@@ -2,19 +2,21 @@ import backtrader as bt
 import datetime
 from strategies.ema_atr_strategy import EmaAtrStrategy
 
-def run_optimizer():
-    print("Starting Parameter Optimization (Grid Search)...")
+import sys
+
+def run_optimizer(symbol='BTC_USDT'):
+    print(f"Starting Parameter Optimization (Grid Search) for {symbol}...")
 
     # 1. Create a Cerebro engine optimized for multiprocessing
     # Set maxcpus=1 to avoid multiprocessing issues in some environments (like Windows/Sandbox),
     # or let it default if your system handles it well. We'll use 1 for stability here.
     cerebro = bt.Cerebro(maxcpus=1, optreturn=False)
 
-    # 2. Add the Data Feed (Focusing on BTC for optimization on 4h timeframe)
+    # 2. Add the Data Feed (Focusing on specific asset for optimization on 4h timeframe)
     # Using full history to get better backtest coverage
     data = bt.feeds.GenericCSVData(
-        dataname='data/BTC_USDT_4h.csv',
-        name='BTC_USDT_4h',
+        dataname=f'data/{symbol}_4h.csv',
+        name=f'{symbol}_4h',
         datetime=0,
         open=1,
         high=2,
@@ -27,16 +29,14 @@ def run_optimizer():
     cerebro.adddata(data)
 
     # 3. Add the Strategy with Optimization Parameters for 4h Timeframe
-    # On a 4h chart, the number of bars is 6x the daily bars.
-    # Therefore, EMA values should generally be larger to capture similar absolute time trends,
-    # or keep them somewhat similar to capture faster micro-trends.
     print("Sweeping Fast EMA: 10 to 50 (step 10)")
     print("Sweeping Slow EMA: 50 to 200 (step 30)")
 
+    # To adapt the optimizer to the new `asset_parameters` dictionary logic,
+    # we just need to pass `default_periods` so the optstrategy sweeps through pairs.
     cerebro.optstrategy(
         EmaAtrStrategy,
-        fast_period=range(10, 51, 10),    # [10, 20, 30, 40, 50]
-        slow_period=range(50, 201, 30),   # [50, 80, 110, 140, 170, 200]
+        default_periods=[(f, s) for f in range(10, 51, 10) for s in range(50, 201, 30)],
         # Keep others constant for this test.
         # Ensure we are simulating an ALL-IN strategy on a SINGLE asset for optimization
         # (Since we are passing 1 asset, 0.95 means 95% allocation)
@@ -70,8 +70,7 @@ def run_optimizer():
     for run in optimized_runs:
         for strategy in run:
             # Extract parameters
-            fast = strategy.params.fast_period
-            slow = strategy.params.slow_period
+            fast, slow = strategy.params.default_periods
 
             # Extract analyzer results
             sharpe_analysis = strategy.analyzers.sharpe.get_analysis()
@@ -112,11 +111,18 @@ def run_optimizer():
     # Sort results primarily by Sharpe Ratio (Industry Standard for robust optimization), then by ROI
     sorted_results = sorted(results_list, key=lambda x: (x['sharpe'], x['roi_pct']), reverse=True)
 
-    # Print top 10 results
+    # Print top 5 results
+    print(f"\n[{symbol}] Top 5 Results:")
     print(f"{'Fast EMA':<9} | {'Slow EMA':<9} | {'Trades':<7} | {'Win%':<7} | {'ROI (%)':<9} | {'Max DD (%)':<11} | {'Sharpe':<8} | {'Final Value':<15}")
     print("-" * 95)
-    for res in sorted_results[:10]:
+    for res in sorted_results[:5]:
         print(f"{res['fast']:<9} | {res['slow']:<9} | {res['total_trades']:<7} | {res['win_rate']:<7.1f} | {res['roi_pct']:<9.2f} | {res['max_dd']:<11.2f} | {res['sharpe']:<8.4f} | ${res['final_value']:<15.2f}")
+    print("\n" + "="*95 + "\n")
 
 if __name__ == '__main__':
-    run_optimizer()
+    # Optionally accept symbol from command line, otherwise run all 4
+    if len(sys.argv) > 1:
+        run_optimizer(sys.argv[1])
+    else:
+        for sym in ['BTC_USDT', 'ETH_USDT', 'SOL_USDT', 'BNB_USDT']:
+            run_optimizer(sym)
