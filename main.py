@@ -7,14 +7,14 @@ def run_backtest():
     cerebro = bt.Cerebro()
 
     # 2. Add the Data Feeds for Multiple Assets
-    # Expanding to Timeframe Diversification (1h + 4h) for the Elite 4 Portfolio
+    # Expanding to Macro-Filtered Micro Execution (15m execution, 4h & 1d filters)
     symbols = ['BTC_USDT', 'ETH_USDT', 'SOL_USDT', 'BNB_USDT']
     for sym in symbols:
-        # Add 1h Data First (Master Clock for Execution)
+        # Add 15m Data First (Master Clock for Execution)
         try:
-            data_1h = bt.feeds.GenericCSVData(
-                dataname=f'data/{sym}_1h.csv',
-                name=f'{sym}_1h',
+            data_15m = bt.feeds.GenericCSVData(
+                dataname=f'data/{sym}_15m.csv',
+                name=f'{sym}_15m',
                 datetime=0,
                 open=1,
                 high=2,
@@ -23,16 +23,16 @@ def run_backtest():
                 volume=5,
                 openinterest=-1,
                 dtformat=('%Y-%m-%d %H:%M:%S'),
-                # Start 1h from 2022 to align the actual trading period
+                # Start 15m from 2022 to align the actual trading period
                 fromdate=datetime.datetime(2022, 1, 1),
             )
-            # Add 1h data first so it acts as the master clock, executing next() every hour
-            cerebro.adddata(data_1h)
+            # Add 15m data first so it acts as the master clock, executing next() every 15 minutes
+            cerebro.adddata(data_15m)
         except Exception as e:
-            print(f"Skipping {sym} 1h data feed due to error: {e}")
+            print(f"Skipping {sym} 15m data feed due to error: {e}")
             continue
 
-        # Add 4h Data (for Macro Execution)
+        # Add 4h Data (for Macro Trend Filter 1)
         try:
             data_4h = bt.feeds.GenericCSVData(
                 dataname=f'data/{sym}_4h.csv',
@@ -45,26 +45,45 @@ def run_backtest():
                 volume=5,
                 openinterest=-1,
                 dtformat=('%Y-%m-%d %H:%M:%S'),
-                # Start 4h from 2022 to align the actual trading period
                 fromdate=datetime.datetime(2022, 1, 1),
             )
             cerebro.adddata(data_4h)
         except Exception as e:
             print(f"Skipping {sym} 4h data feed due to error: {e}")
 
+        # Add 1d Data (for Macro Trend Filter 2 - 200 SMA)
+        try:
+            data_1d = bt.feeds.GenericCSVData(
+                dataname=f'data/{sym}_1d.csv',
+                name=f'{sym}_1d',
+                datetime=0,
+                open=1,
+                high=2,
+                low=3,
+                close=4,
+                volume=5,
+                openinterest=-1,
+                dtformat=('%Y-%m-%d'),
+                # Start from 2021 to warm up the 200 SMA before 2022 execution
+                fromdate=datetime.datetime(2021, 1, 1),
+            )
+            cerebro.adddata(data_1d)
+        except Exception as e:
+            print(f"Skipping {sym} 1d data feed due to error: {e}")
+
     # 3. Add the Strategy with Asset/Timeframe-Specific Optimized Parameters
     # We pass the best Fast/Slow EMA combinations found by our optimizer for the Elite 4 assets
-    # 1h parameters are 4x the 4h parameters to ensure equivalent macro trend filtering.
+    # 15m parameters are 16x the 4h parameters to ensure equivalent trend filtering on the execution timeframe.
     optimized_params = {
         'BTC_USDT_4h': (50, 110),
         'ETH_USDT_4h': (40, 50),
         'SOL_USDT_4h': (40, 170),
         'BNB_USDT_4h': (30, 170),
 
-        'BTC_USDT_1h': (200, 440),
-        'ETH_USDT_1h': (160, 200),
-        'SOL_USDT_1h': (160, 680),
-        'BNB_USDT_1h': (120, 680)
+        'BTC_USDT_15m': (800, 1760),
+        'ETH_USDT_15m': (640, 800),
+        'SOL_USDT_15m': (640, 2720),
+        'BNB_USDT_15m': (480, 2720)
     }
 
     cerebro.addstrategy(EmaAtrStrategy, asset_parameters=optimized_params)

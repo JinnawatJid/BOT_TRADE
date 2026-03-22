@@ -25,32 +25,68 @@ class EmaAtrStrategy(bt.Strategy):
         self.stop_loss_prices = dict()
         self.entry_prices = dict()
 
+        # Dictionaries to link 15m execution feeds to their respective 4h and 1d macro filters
+        self.macro_4h_data = dict()
+        self.macro_1d_data = dict()
+        self.macro_1d_smas = dict()
+
+        # 1. First Pass: Identify and store the 4h and 1d macro filter feeds
         for d in self.datas:
-            self.orders[d] = None
-            self.stop_loss_prices[d] = None
-            self.entry_prices[d] = None
+            base_symbol = d._name.replace('_4h', '').replace('_1d', '').replace('_15m', '')
 
-            # Determine parameters for this specific asset
-            fast_p, slow_p = self.params.asset_parameters.get(d._name, self.params.default_periods)
+            if d._name.endswith('_4h'):
+                self.macro_4h_data[base_symbol] = d
 
-            # Indicators per feed
-            fast_ema = bt.indicators.ExponentialMovingAverage(d, period=fast_p)
-            slow_ema = bt.indicators.ExponentialMovingAverage(d, period=slow_p)
+                # We need the 4h EMAs for the filter condition (Fast EMA > Slow EMA)
+                fast_p, slow_p = self.params.asset_parameters.get(d._name, self.params.default_periods)
+                fast_ema = bt.indicators.ExponentialMovingAverage(d, period=fast_p)
+                slow_ema = bt.indicators.ExponentialMovingAverage(d, period=slow_p)
 
-            atr = bt.indicators.AverageTrueRange(d, period=self.params.atr_period)
-            atr.plotinfo.plot = False
+                self.inds[d] = {
+                    'fast_ema': fast_ema,
+                    'slow_ema': slow_ema,
+                    'slow_p': slow_p
+                }
 
-            crossover = bt.indicators.CrossOver(fast_ema, slow_ema)
-            crossover.plotinfo.plot = False
+            elif d._name.endswith('_1d'):
+                self.macro_1d_data[base_symbol] = d
 
-            # Store in dict
-            self.inds[d] = {
-                'fast_ema': fast_ema,
-                'slow_ema': slow_ema,
-                'atr': atr,
-                'crossover': crossover,
-                'slow_p': slow_p # Save this for minimum bar checks
-            }
+                # Daily 200 SMA Filter
+                sma200 = bt.indicators.SimpleMovingAverage(d, period=200)
+                sma200.plotinfo.plot = False
+                self.macro_1d_smas[base_symbol] = sma200
+
+        # 2. Second Pass: Setup the 15m execution feeds
+        for d in self.datas:
+            if d._name.endswith('_15m'):
+                base_symbol = d._name.replace('_15m', '')
+
+                self.orders[d] = None
+                self.stop_loss_prices[d] = None
+                self.entry_prices[d] = None
+
+                # Determine parameters for this specific 15m execution asset
+                fast_p, slow_p = self.params.asset_parameters.get(d._name, self.params.default_periods)
+
+                # Execution Indicators
+                fast_ema = bt.indicators.ExponentialMovingAverage(d, period=fast_p)
+                slow_ema = bt.indicators.ExponentialMovingAverage(d, period=slow_p)
+
+                atr = bt.indicators.AverageTrueRange(d, period=self.params.atr_period)
+                atr.plotinfo.plot = False
+
+                crossover = bt.indicators.CrossOver(fast_ema, slow_ema)
+                crossover.plotinfo.plot = False
+
+                # Store in dict
+                self.inds[d] = {
+                    'fast_ema': fast_ema,
+                    'slow_ema': slow_ema,
+                    'atr': atr,
+                    'crossover': crossover,
+                    'slow_p': slow_p,
+                    'base_symbol': base_symbol
+                }
 
     def notify_order(self, order):
         if order.status in [order.Submitted, order.Accepted]:
@@ -93,13 +129,27 @@ class EmaAtrStrategy(bt.Strategy):
             print('%s, %s' % (dt.isoformat(), txt))
 
     def next(self):
-        # In a portfolio, we loop through all available data feeds
-        num_assets = len(self.datas)
+        # We ONLY execute trades on the 15m timeframes
+        trading_assets = [d for d in self.datas if d._name.endswith('_15m')]
+        num_assets = len(trading_assets)
 
-        for d in self.datas:
+        for d in trading_assets:
             ind = self.inds[d]
+            base_symbol = ind['base_symbol']
 
-            # Skip if data is not mature enough yet for this specific asset's slow EMA
+            # Retrieve the macro filters
+            data_4h = self.macro_4h_data.get(base_symbol)
+            data_1d = self.macro_1d_data.get(base_symbol)
+            sma_1d = self.macro_1d_smas.get(base_symbol)
+
+            if data_4h is None or data_1d is None or sma_1d is None:
+                continue
+
+            # Ensure macro indicators are fully primed
+            if len(data_4h) < self.inds[data_4h]['slow_p'] or len(sma_1d) < 200:
+                continue
+
+            # Skip if 15m execution data is not mature enough yet
             if len(d) < ind['slow_p']:
                 continue
 
@@ -111,25 +161,38 @@ class EmaAtrStrategy(bt.Strategy):
 
             if not pos:
                 # We are NOT in the market for this asset
+
+                # Check execution trigger: 15m Fast EMA crosses above 15m Slow EMA
                 if ind['crossover'][0] > 0:
-                    self.log(f'BUY CREATE [{d._name}], Price: {d.close[0]:.2f}', dt=d.datetime.date(0))
 
-                    # Portfolio Position Sizing (Equal Weight Cash Allocation):
-                    # We allocate equal weight to each asset based on available total equity.
-                    # E.g., if total risk is 95% and we have 8 assets (4 coins * 2 timeframes), each gets ~11.87%
-                    total_equity = self.broker.getvalue()
-                    allocation_per_asset = (total_equity * self.params.risk_per_trade_pct) / num_assets
+                    # Check Macro Filter 1: 4h Fast EMA > 4h Slow EMA
+                    # Use [-1] to avoid lookahead bias on the intraday evaluation
+                    macro_4h_up = self.inds[data_4h]['fast_ema'][-1] > self.inds[data_4h]['slow_ema'][-1]
 
-                    # Ensure we have enough actual cash before buying
-                    cash = self.broker.get_cash()
-                    target_value = min(allocation_per_asset, cash)
+                    # Check Macro Filter 2: Daily Close > Daily 200 SMA
+                    # Use [-1] to avoid lookahead bias on the intraday evaluation
+                    macro_1d_up = data_1d.close[-1] > sma_1d[-1]
 
-                    size = target_value / d.close[0]
+                    if macro_4h_up and macro_1d_up:
+                        self.log(f'BUY CREATE [{d._name}], Price: {d.close[0]:.2f} (Macro Filters Passed: 4h UP, 1d UP)', dt=d.datetime.date(0))
 
-                    if size > 0:
-                        self.orders[d] = self.buy(data=d, size=size)
+                        # Portfolio Position Sizing (Equal Weight Cash Allocation)
+                        # Distributed equally among the 4 execution assets (15m only)
+                        total_equity = self.broker.getvalue()
+                        allocation_per_asset = (total_equity * self.params.risk_per_trade_pct) / num_assets
+
+                        # Ensure we have enough actual cash before buying
+                        cash = self.broker.get_cash()
+                        target_value = min(allocation_per_asset, cash)
+
+                        size = target_value / d.close[0]
+
+                        if size > 0:
+                            self.orders[d] = self.buy(data=d, size=size)
+                        else:
+                            self.log(f'Not enough cash to buy [{d._name}]', dt=d.datetime.date(0))
                     else:
-                        self.log(f'Not enough cash to buy [{d._name}]', dt=d.datetime.date(0))
+                        self.log(f'BUY BLOCKED [{d._name}] - 15m Crossover ignored due to Macro Filters (4h UP: {macro_4h_up}, 1d UP: {macro_1d_up})', dt=d.datetime.date(0))
 
             else:
                 # We ARE in the market for this asset

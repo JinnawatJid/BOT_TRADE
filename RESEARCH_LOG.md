@@ -325,3 +325,22 @@ To maintain consistency and rigorous scientific standards across all future expe
     *   **Sharpe Ratio:** 0.528
     *   **Final Portfolio Value / ROI:** $14,047 (+40.47%)
 *   **Conclusion & Next Steps:** The hypothesis succeeded in violently increasing the trade count, jumping from 324 to an incredible 1,124 trades. However, this perfectly illustrates the danger of overtrading in trend-following systems. By constantly trying to "buy the dip" within a macro trend, the bot suffered "death by a thousand cuts" during choppy sideways consolidations. The Win Rate dropped to 41%, the Profit Factor crashed to a mediocre 1.15, and the Max Drawdown spiked to 21.55%. Despite trading nearly 4x as often, the absolute ROI remained identical to Experiment 14 (+40%). The Sharpe ratio collapsed to 0.528. This proves that our patient, "Macro Crossover Only" approach from Experiment 14 is vastly mathematically superior to aggressively forcing trades on micro pullbacks.
+
+---
+
+## Experiment 16: Macro-Filtered Micro Execution (15m)
+**Date:** Advanced CTA Multi-Timeframe Execution
+**Strategy:** 15m EMA Crossover + 15m ATR Trailing Stop + 15m Breakeven Stop
+**Macro Filters:** 4h Fast EMA > 4h Slow EMA (Filter 1), AND 1d Close > 1d 200 SMA (Filter 2). Both strictly evaluated without lookahead bias.
+**Parameters:** 15m EMAs mapped up by 16x (e.g., 50/110 -> 800/1760) to emulate the 4h trend mathematically on the 15m chart.
+**Assets Traded:** "Elite 4" Basket (15m Execution timeframe only)
+
+*   **Hypothesis/Logic:** Following the failure of Pullback Re-entries, we tested the industry-standard "Macro-Filtered Micro Execution." By dropping the execution timeframe to the highly sensitive 15-minute chart, we anticipated thousands of crossover signals. However, by strictly requiring both the 4h macro trend and the 1d 200 SMA macro trend to be bullish, the bot would theoretically only take these 15m signals during massive "oceanic" uptrends, allowing for a high, safe trade count.
+*   **Results:**
+    *   **Total Trades:** 69
+    *   **Win Rate:** 42.03% (29 won, 40 lost)
+    *   **Profit Factor:** 0.80
+    *   **Max Drawdown:** 6.72%
+    *   **Sharpe Ratio:** -1.47
+    *   **Final Portfolio Value / ROI:** $9,633 (-3.6%)
+*   **Conclusion & Next Steps:** The hypothesis failed on multiple fronts. The strict "Triple Threat" alignment (1d, 4h, and 15m all bullish) proved to be far too restrictive. The trade count collapsed to a mere 69 trades over 4 years. Worse, by waiting for all three timeframes to align, the bot suffered extreme lag; it only bought at the absolute top of euphoric blow-off tops, immediately getting stopped out when the micro-trend reversed. The strategy lost money (-3.6%). This confirms that while multi-timeframe *diversification* (Exp 14) is incredible for hedging risk, multi-timeframe *filtering* (requiring all clocks to align) destroys edge by forcing late entries. The bot must be reverted to Experiment 14.

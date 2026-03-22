@@ -58,12 +58,20 @@ def fetch_data(symbol='BTC/USDT', timeframe='4h', since='2021-01-01T00:00:00Z'):
     print(f"Data saved to {filename} (Total rows: {len(df)})")
 
 if __name__ == "__main__":
-    # Fetch 1h data for the Elite 4 portfolio to perform Timeframe Diversification (Exp 14)
+    # Fetch 15m and 1d data for the Elite 4 portfolio to perform Macro-Filtered Execution (Exp 16)
     symbols = [
         'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT'
     ]
     for symbol in symbols:
+        # Fetch 15m data for execution
         try:
-            fetch_data(symbol=symbol, timeframe='1h', since='2022-01-01T00:00:00Z')
+            fetch_data(symbol=symbol, timeframe='15m', since='2022-01-01T00:00:00Z')
         except Exception as e:
-            print(f"Error for {symbol}: {e}")
+            print(f"Error fetching 15m for {symbol}: {e}")
+
+        # Fetch 1d data for the Daily 200 SMA regime filter
+        try:
+            # Start from 2021 to warm up the 200 SMA before 2022 trading begins
+            fetch_data(symbol=symbol, timeframe='1d', since='2021-01-01T00:00:00Z')
+        except Exception as e:
+            print(f"Error fetching 1d for {symbol}: {e}")
