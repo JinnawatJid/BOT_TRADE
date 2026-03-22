@@ -58,10 +58,14 @@ def fetch_data(symbol='BTC/USDT', timeframe='4h', since='2021-01-01T00:00:00Z'):
     print(f"Data saved to {filename} (Total rows: {len(df)})")
 
 if __name__ == "__main__":
-    # Fetch 4h data for a diversified portfolio to perform asset-specific optimization
-    symbols = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT']
+    # Fetch 4h data for a diversified 10-asset portfolio to perform asset-specific optimization
+    symbols = [
+        'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT',
+        'XRP/USDT', 'ADA/USDT', 'DOGE/USDT', 'DOT/USDT',
+        'LINK/USDT', 'AVAX/USDT'
+    ]
     for symbol in symbols:
         try:
-            fetch_data(symbol=symbol, timeframe='4h', since='2022-01-01T00:00:00Z') # SOL has issues fetching too far back on KuCoin 4h
+            fetch_data(symbol=symbol, timeframe='4h', since='2022-01-01T00:00:00Z') # Start all at 2022 to align datasets for portfolio backtest
         except Exception as e:
             print(f"Error for {symbol}: {e}")

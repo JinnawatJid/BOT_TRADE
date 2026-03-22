@@ -120,9 +120,9 @@ def run_optimizer(symbol='BTC_USDT'):
     print("\n" + "="*95 + "\n")
 
 if __name__ == '__main__':
-    # Optionally accept symbol from command line, otherwise run all 4
+    # Optionally accept symbol from command line, otherwise run all 10 assets
     if len(sys.argv) > 1:
         run_optimizer(sys.argv[1])
     else:
-        for sym in ['BTC_USDT', 'ETH_USDT', 'SOL_USDT', 'BNB_USDT']:
+        for sym in ['BTC_USDT', 'ETH_USDT', 'SOL_USDT', 'BNB_USDT', 'XRP_USDT', 'ADA_USDT', 'DOGE_USDT', 'DOT_USDT', 'LINK_USDT', 'AVAX_USDT']:
             run_optimizer(sym)

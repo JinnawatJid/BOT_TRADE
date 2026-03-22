@@ -7,8 +7,12 @@ def run_backtest():
     cerebro = bt.Cerebro()
 
     # 2. Add the Data Feeds for Multiple Assets
-    # Returning to the Multi-Asset Portfolio on the 4h Timeframe
-    symbols = ['BTC_USDT', 'ETH_USDT', 'SOL_USDT', 'BNB_USDT']
+    # Expanding to a 10-Asset Portfolio on the 4h Timeframe
+    symbols = [
+        'BTC_USDT', 'ETH_USDT', 'SOL_USDT', 'BNB_USDT',
+        'XRP_USDT', 'ADA_USDT', 'DOGE_USDT', 'DOT_USDT',
+        'LINK_USDT', 'AVAX_USDT'
+    ]
     for sym in symbols:
         try:
             data = bt.feeds.GenericCSVData(
@@ -22,7 +26,7 @@ def run_backtest():
                 volume=5,
                 openinterest=-1,
                 dtformat=('%Y-%m-%d %H:%M:%S'), # 4h format includes time
-                # Start from 2022 since KuCoin SOL data goes back to roughly mid-2021
+                # Start from 2022 to align all 10 assets
                 fromdate=datetime.datetime(2022, 1, 1),
             )
             cerebro.adddata(data)
@@ -30,12 +34,18 @@ def run_backtest():
             print(f"Skipping {sym} data feed due to error: {e}")
 
     # 3. Add the Strategy with Asset-Specific Optimized Parameters
-    # We pass the best Fast/Slow EMA combinations found by our optimizer for each asset
+    # We pass the best Fast/Slow EMA combinations found by our optimizer for each of the 10 assets
     optimized_params = {
         'BTC_USDT_4h': (50, 110),
         'ETH_USDT_4h': (40, 50),
         'SOL_USDT_4h': (40, 170),
-        'BNB_USDT_4h': (30, 170)
+        'BNB_USDT_4h': (30, 170),
+        'XRP_USDT_4h': (40, 140), # Best Sharpe for XRP
+        'ADA_USDT_4h': (30, 50),  # Best Sharpe for ADA
+        'DOGE_USDT_4h': (30, 110),# Best Sharpe for DOGE
+        'DOT_USDT_4h': (20, 80),  # Best Sharpe for DOT
+        'LINK_USDT_4h': (30, 170),# Best Sharpe for LINK
+        'AVAX_USDT_4h': (20, 170) # Best Sharpe for AVAX
     }
 
     cerebro.addstrategy(EmaAtrStrategy, asset_parameters=optimized_params)
