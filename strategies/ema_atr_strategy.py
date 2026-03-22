@@ -13,9 +13,7 @@ class EmaAtrStrategy(bt.Strategy):
 
         ('atr_period', 14),
         ('atr_multiplier', 2.0),
-        # Instead of allocating a fixed 95% of cash, we now risk a fixed percentage of TOTAL EQUITY per trade.
-        # Industry Standard for trend following is 1% to 2% risk per trade.
-        ('risk_per_trade_pct', 0.02), # Risk exactly 2% of total equity per trade based on distance to Stop Loss
+        ('risk_per_trade_pct', 0.95), # Will allocate this total percentage across all assets (Equal Weight Cash Allocation)
         ('printlog', True),           # Flag to toggle logging off during optimization
     )
 
@@ -109,28 +107,17 @@ class EmaAtrStrategy(bt.Strategy):
                 if ind['crossover'][0] > 0:
                     self.log(f'BUY CREATE [{d._name}], Price: {d.close[0]:.2f}', dt=d.datetime.date(0))
 
-                    # Dynamic Volatility Sizing (Risk Parity / Inverse Volatility)
-                    # 1. How much money are we willing to lose if this trade hits the Stop Loss? (e.g., 2% of Total Equity)
+                    # Portfolio Position Sizing (Equal Weight Cash Allocation):
+                    # We allocate equal weight to each asset based on available total equity.
+                    # E.g., if total risk is 95% and we have 4 assets, each asset gets ~23.75% of TOTAL equity.
                     total_equity = self.broker.getvalue()
-                    risk_amount = total_equity * self.params.risk_per_trade_pct
+                    allocation_per_asset = (total_equity * self.params.risk_per_trade_pct) / num_assets
 
-                    # 2. What is the actual dollar risk per 1 coin of this specific asset?
-                    # The risk per coin is the distance from our Entry Price to our Stop Loss.
-                    risk_per_coin = ind['atr'][0] * self.params.atr_multiplier
-
-                    # 3. How many coins can we buy so that if it hits the Stop Loss, we lose exactly `risk_amount`?
-                    if risk_per_coin > 0:
-                        size = risk_amount / risk_per_coin
-                    else:
-                        size = 0
-
-                    # 4. Final Sanity Check: Do we actually have enough cash to buy this many coins?
-                    # If the calculated size costs more than our available cash, cap it at max available cash.
+                    # Ensure we have enough actual cash before buying
                     cash = self.broker.get_cash()
-                    cost_of_trade = size * d.close[0]
+                    target_value = min(allocation_per_asset, cash)
 
-                    if cost_of_trade > (cash * 0.98): # Leave 2% buffer for commissions
-                        size = (cash * 0.98) / d.close[0]
+                    size = target_value / d.close[0]
 
                     if size > 0:
                         self.orders[d] = self.buy(data=d, size=size)
