@@ -43,17 +43,12 @@ class EmaAtrStrategy(bt.Strategy):
             crossover = bt.indicators.CrossOver(fast_ema, slow_ema)
             crossover.plotinfo.plot = False
 
-            # Indicator for Pullback Re-Entry: Price crossing above Fast EMA
-            price_fast_cross = bt.indicators.CrossOver(d.close, fast_ema)
-            price_fast_cross.plotinfo.plot = False
-
             # Store in dict
             self.inds[d] = {
                 'fast_ema': fast_ema,
                 'slow_ema': slow_ema,
                 'atr': atr,
                 'crossover': crossover,
-                'price_fast_cross': price_fast_cross,
                 'slow_p': slow_p # Save this for minimum bar checks
             }
 
@@ -116,18 +111,8 @@ class EmaAtrStrategy(bt.Strategy):
 
             if not pos:
                 # We are NOT in the market for this asset
-
-                # Condition 1: Macro Trend Crossover Entry
-                is_macro_entry = ind['crossover'][0] > 0
-
-                # Condition 2: Pullback Re-Entry (Macro Trend is UP, and Price just crossed back above Fast EMA)
-                is_macro_up = ind['fast_ema'][0] > ind['slow_ema'][0]
-                is_pullback_recovery = ind['price_fast_cross'][0] > 0
-                is_reentry = is_macro_up and is_pullback_recovery
-
-                if is_macro_entry or is_reentry:
-                    entry_type = "MACRO CROSSOVER" if is_macro_entry else "PULLBACK RE-ENTRY"
-                    self.log(f'BUY CREATE ({entry_type}) [{d._name}], Price: {d.close[0]:.2f}', dt=d.datetime.date(0))
+                if ind['crossover'][0] > 0:
+                    self.log(f'BUY CREATE [{d._name}], Price: {d.close[0]:.2f}', dt=d.datetime.date(0))
 
                     # Portfolio Position Sizing (Equal Weight Cash Allocation):
                     # We allocate equal weight to each asset based on available total equity.
