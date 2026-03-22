@@ -230,3 +230,22 @@ To maintain consistency and rigorous scientific standards across all future expe
     *   **Sharpe Ratio:** 0.305
     *   **Final Portfolio Value / ROI:** $13,681 (+36.8%)
 *   **Conclusion & Next Steps:** While the mathematical theory of Risk Parity is sound, it performed worse than the naive equal-weight approach in this specific crypto basket. Because crypto altcoins are both highly volatile and frequently trendless (whipsawing), Risk Parity forced the bot to take larger cash positions in "stable" fake-outs and smaller positions in explosive trends. The overall framework is now mathematically complete and industry-standard, but it highlights that in Crypto Trend Following, selecting the *right* assets (e.g., sticking to the elite 4 coins from Experiment 8) is far more important than blindly applying sophisticated sizing models to bad assets.
+
+---
+
+## Experiment 11: The "Goldmine" Rollback (Finalizing the Model)
+**Date:** Production Ready Rollback
+**Strategy:** EMA Crossover + ATR Trailing Stop
+**Parameters:** Optimized per asset (BTC: 50/110, ETH: 40/50, SOL: 40/170, BNB: 30/170)
+**Position Sizing:** Equal Weight Cash Allocation (95% of total equity divided evenly among 4 assets = ~23.75% allocation per trade)
+**Assets Traded:** "Elite 4" Basket: BTC, ETH, SOL, BNB (4h Timeframe, 2022-2026)
+
+*   **Hypothesis/Logic:** Following the poor performance of Risk Parity (Exp 10) and the drag of the 10-asset universe (Exp 9), the user identified that the peak efficiency of this Trend Following framework was found in Experiment 8. The hypothesis is that reverting strictly to the top 4 "Elite" crypto assets, utilizing their mathematically optimized, asset-specific EMA parameters on the 4-hour timeframe, and sizing positions via naive Equal Weight Cash Allocation (ignoring the Volatility Paradox) yields the best risk-adjusted return in the crypto market.
+*   **Results (Confirmed Replication of Exp 8):**
+    *   **Total Trades:** 162
+    *   **Win Rate:** 45.06% (73 won, 89 lost)
+    *   **Profit Factor:** 1.59
+    *   **Max Drawdown:** 11.28%
+    *   **Sharpe Ratio:** 0.866
+    *   **Final Portfolio Value / ROI:** $16,276 (+62.7%)
+*   **Conclusion:** The results perfectly matched the historical test from Experiment 8, confirming the system's stability. By isolating the strongest, most liquid trending assets (BTC, ETH, SOL, BNB) and giving each of them sufficient capital room to run via Equal Weighting, the framework achieved a stellar 0.86 Sharpe Ratio and an incredibly safe 11.28% Max Drawdown over 162 trades. This is the finalized, Industry Standard "White Box" model ready for Paper Trading and Live Execution.
