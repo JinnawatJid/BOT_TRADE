@@ -306,3 +306,22 @@ To maintain consistency and rigorous scientific standards across all future expe
     *   **Sharpe Ratio:** 0.842
     *   **Final Portfolio Value / ROI:** $14,028 (+40.2%)
 *   **Conclusion & Next Steps:** The hypothesis was structurally sound. Exactly as predicted, the Total Trades doubled to a massive 324 trades, providing excellent statistical significance. Timeframe diversification acted as a massive hedge: Max Drawdown plummeted to an almost unheard-of 6.99% for a fully invested crypto portfolio. The Sharpe Ratio remained robust at 0.842, and the Win Rate held strong at 46.3%. However, by splitting the equity across 8 feeds (half of which are the choppier `1h` timeframe), the absolute ROI dropped compared to just trading the `4h` chart heavily. This confirms Timeframe Diversification is an incredibly powerful risk-reduction tool, though it sacrifices some absolute return.
+
+---
+
+## Experiment 15: Pullback Re-Entry Logic
+**Date:** Aggressive Trade Frequency Scaling
+**Strategy:** EMA Crossover + ATR Trailing Stop + Breakeven Stop Trigger + Pullback Re-Entry
+**Parameters:** Optimized per asset (1h and 4h timeframes running concurrently).
+**Position Sizing:** Equal Weight Cash Allocation across 8 feeds (~11.87% equity per trade)
+**Assets Traded:** "Elite 4" Basket: BTC, ETH, SOL, BNB
+
+*   **Hypothesis/Logic:** To forcefully increase the trade count and ensure we never "miss the boat" on a massive trend after an early stop-out, we introduced a "Pullback Re-Entry" mechanic. If the bot is flat but the macro trend is still UP (Fast EMA > Slow EMA), the bot is allowed to instantly re-enter a long position if the price pulls back and closes back above the Fast EMA. The goal is to maximize trade frequency during bull runs.
+*   **Results:**
+    *   **Total Trades:** 1,124
+    *   **Win Rate:** 41.10% (462 won, 661 lost)
+    *   **Profit Factor:** 1.15
+    *   **Max Drawdown:** 21.55%
+    *   **Sharpe Ratio:** 0.528
+    *   **Final Portfolio Value / ROI:** $14,047 (+40.47%)
+*   **Conclusion & Next Steps:** The hypothesis succeeded in violently increasing the trade count, jumping from 324 to an incredible 1,124 trades. However, this perfectly illustrates the danger of overtrading in trend-following systems. By constantly trying to "buy the dip" within a macro trend, the bot suffered "death by a thousand cuts" during choppy sideways consolidations. The Win Rate dropped to 41%, the Profit Factor crashed to a mediocre 1.15, and the Max Drawdown spiked to 21.55%. Despite trading nearly 4x as often, the absolute ROI remained identical to Experiment 14 (+40%). The Sharpe ratio collapsed to 0.528. This proves that our patient, "Macro Crossover Only" approach from Experiment 14 is vastly mathematically superior to aggressively forcing trades on micro pullbacks.
