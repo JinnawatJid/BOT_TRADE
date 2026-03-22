@@ -211,3 +211,22 @@ To maintain consistency and rigorous scientific standards across all future expe
     *   **Sharpe Ratio:** 0.4766
     *   **Final Portfolio Value / ROI:** $14,748 (+47.4%)
 *   **Conclusion & Next Steps:** The experiment successfully achieved massive statistical significance (441 trades). As anticipated, the addition of weaker altcoins (like DOT and ADA) dragged the Win Rate down to ~41% and the Sharpe Ratio down to ~0.48. However, the Portfolio Sizing mechanism proved its worth: despite trading highly volatile "loser" coins, the Max Drawdown of the entire portfolio was contained to an incredibly safe 17.61%. This confirms that the framework is exceptionally robust and capable of surviving and profiting across a wide, varied universe of assets without blowing up.
+
+---
+
+## Experiment 10: Dynamic Volatility Sizing (Risk Parity)
+**Date:** Sizing & Allocation Phase
+**Strategy:** EMA Crossover + ATR Trailing Stop
+**Parameters:** Optimized per asset (10 assets)
+**Position Sizing:** Inverse Volatility / Risk Parity (Risk exactly 2% of Total Equity per trade based on distance to ATR Stop Loss).
+**Assets Traded:** BTC, ETH, SOL, BNB, XRP, ADA, DOGE, DOT, LINK, AVAX (4h Timeframe, 2022-2026)
+
+*   **Hypothesis/Logic:** Allocating equal cash (~9.5%) to every asset (as done in Experiment 9) means highly volatile assets like DOGE contribute massively more risk to the overall portfolio than stable assets like BTC. To fix this and match Institutional/Hedge Fund standards, we implemented Dynamic Volatility Sizing (Risk Parity). The bot now calculates position size by allocating exactly a 2% equity risk to the distance of the ATR Stop Loss, capping at available cash.
+*   **Results:**
+    *   **Total Trades:** 297
+    *   **Win Rate:** 37.37%
+    *   **Profit Factor:** 1.13
+    *   **Max Drawdown:** 30.32%
+    *   **Sharpe Ratio:** 0.305
+    *   **Final Portfolio Value / ROI:** $13,681 (+36.8%)
+*   **Conclusion & Next Steps:** While the mathematical theory of Risk Parity is sound, it performed worse than the naive equal-weight approach in this specific crypto basket. Because crypto altcoins are both highly volatile and frequently trendless (whipsawing), Risk Parity forced the bot to take larger cash positions in "stable" fake-outs and smaller positions in explosive trends. The overall framework is now mathematically complete and industry-standard, but it highlights that in Crypto Trend Following, selecting the *right* assets (e.g., sticking to the elite 4 coins from Experiment 8) is far more important than blindly applying sophisticated sizing models to bad assets.
