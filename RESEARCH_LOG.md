@@ -287,3 +287,22 @@ To maintain consistency and rigorous scientific standards across all future expe
     *   **Sharpe Ratio:** 0.932
     *   **Final Portfolio Value / ROI:** $17,140 (+71.4%)
 *   **Conclusion & Next Steps:** The hypothesis was a massive success. The Trade Count remained identical to our baseline (162 trades). However, the Win Rate jumped from 45.06% to nearly 47%, the Profit Factor increased to 1.70, and the Sharpe Ratio hit a stellar 0.932. Importantly, the Max Drawdown was pushed even lower, down to an incredibly safe 10.39%. This experiment proves that in crypto trend following, actively managing the downside of trades that initially break out but fail to sustain momentum is a superior method for generating Alpha compared to filtering entries. This Breakeven Stop model is our new production standard.
+
+---
+
+## Experiment 14: Timeframe Diversification (1h + 4h)
+**Date:** Scaling Trade Count
+**Strategy:** EMA Crossover + ATR Trailing Stop + Breakeven Stop Trigger
+**Parameters:** Optimized per asset. 4h baseline parameters applied to 4h feeds. 1h feeds received mathematically equivalent macro parameters (4x the 4h inputs).
+**Position Sizing:** Equal Weight Cash Allocation across 8 feeds (4 assets * 2 timeframes = ~11.87% equity per trade)
+**Assets Traded:** "Elite 4" Basket: BTC, ETH, SOL, BNB (1h and 4h Timeframes running concurrently)
+
+*   **Hypothesis/Logic:** To safely scale the Total Trade Count above the 300+ mark for overwhelming statistical significance, we introduced Timeframe Diversification. By running the `1h` chart concurrently with the `4h` chart for the same assets, the bot should capture both micro-trends and macro-trends. Because we split the equity equally across 8 potential concurrent positions instead of 4, the Max Drawdown should remain very low, while the trade count doubles.
+*   **Results:**
+    *   **Total Trades:** 324
+    *   **Win Rate:** 46.30% (150 won, 174 lost)
+    *   **Profit Factor:** 1.55
+    *   **Max Drawdown:** 6.99%
+    *   **Sharpe Ratio:** 0.842
+    *   **Final Portfolio Value / ROI:** $14,028 (+40.2%)
+*   **Conclusion & Next Steps:** The hypothesis was structurally sound. Exactly as predicted, the Total Trades doubled to a massive 324 trades, providing excellent statistical significance. Timeframe diversification acted as a massive hedge: Max Drawdown plummeted to an almost unheard-of 6.99% for a fully invested crypto portfolio. The Sharpe Ratio remained robust at 0.842, and the Win Rate held strong at 46.3%. However, by splitting the equity across 8 feeds (half of which are the choppier `1h` timeframe), the absolute ROI dropped compared to just trading the `4h` chart heavily. This confirms Timeframe Diversification is an incredibly powerful risk-reduction tool, though it sacrifices some absolute return.
