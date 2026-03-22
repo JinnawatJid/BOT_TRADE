@@ -249,3 +249,22 @@ To maintain consistency and rigorous scientific standards across all future expe
     *   **Sharpe Ratio:** 0.866
     *   **Final Portfolio Value / ROI:** $16,276 (+62.7%)
 *   **Conclusion:** The results perfectly matched the historical test from Experiment 8, confirming the system's stability. By isolating the strongest, most liquid trending assets (BTC, ETH, SOL, BNB) and giving each of them sufficient capital room to run via Equal Weighting, the framework achieved a stellar 0.86 Sharpe Ratio and an incredibly safe 11.28% Max Drawdown over 162 trades. This is the finalized, Industry Standard "White Box" model ready for Paper Trading and Live Execution.
+
+---
+
+## Experiment 12: Multi-Timeframe Regime Filter (Daily 200 SMA)
+**Date:** Implementing User Request
+**Strategy:** EMA Crossover + ATR Trailing Stop + Daily 200 SMA Regime Filter
+**Parameters:** Optimized per asset (BTC: 50/110, ETH: 40/50, SOL: 40/170, BNB: 30/170)
+**Position Sizing:** Equal Weight Cash Allocation (95% of total equity divided evenly among 4 assets = ~23.75% allocation per trade)
+**Assets Traded:** "Elite 4" Basket: BTC, ETH, SOL, BNB (4h Timeframe Execution, 1d Timeframe Filter)
+
+*   **Hypothesis/Logic:** While Experiment 11 yielded extremely safe drawdown (11.28%), the Win Rate was still under 50% due to false signals during sideways chop. By introducing a macro trend filter (Daily 200 SMA), the bot will only take 4h long signals when the asset's daily close is strictly above the 200 SMA. The goal is to filter out bad trades, boosting the Win Rate and Sharpe Ratio without destroying the statistically significant trade count.
+*   **Results:**
+    *   **Total Trades:** 78
+    *   **Win Rate:** 33.33% (26 won, 52 lost)
+    *   **Profit Factor:** 1.04
+    *   **Max Drawdown:** 14.35%
+    *   **Sharpe Ratio:** -0.07
+    *   **Final Portfolio Value / ROI:** $10,179 (+1.79%)
+*   **Conclusion & Next Steps:** The hypothesis failed spectacularly. Adding the Daily 200 SMA Regime Filter effectively cut the Trade Count in half (from 162 down to 78) and significantly lowered the Win Rate (from 45% down to 33.3%). The Sharpe Ratio completely collapsed from 0.866 to negative -0.07, and total ROI dropped from +62.7% to practically breakeven (+1.79%). The Max Drawdown even increased slightly to 14.35%. The regime filter proved to be *too restrictive* and lagging; by the time the daily close definitively broke above the 200 SMA, the 4h trend was often already exhausted, leading to late entries that quickly reversed into stop losses. This reaffirms that our trailing stop loss is already doing the heavy lifting, and trying to over-filter entries with lagging higher-timeframe macro indicators destroys Alpha in crypto trend following.

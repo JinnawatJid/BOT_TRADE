@@ -10,10 +10,11 @@ def run_backtest():
     # Reverting back to the "Elite 4" Portfolio to avoid bad altcoins dragging down the Sharpe Ratio
     symbols = ['BTC_USDT', 'ETH_USDT', 'SOL_USDT', 'BNB_USDT']
     for sym in symbols:
+        # Add 4h Data First (Master Clock for Execution)
         try:
-            data = bt.feeds.GenericCSVData(
+            data_4h = bt.feeds.GenericCSVData(
                 dataname=f'data/{sym}_4h.csv',
-                name=f'{sym}_4h', # Name the data feed so the strategy knows which is which
+                name=f'{sym}_4h',
                 datetime=0,
                 open=1,
                 high=2,
@@ -21,13 +22,35 @@ def run_backtest():
                 close=4,
                 volume=5,
                 openinterest=-1,
-                dtformat=('%Y-%m-%d %H:%M:%S'), # 4h format includes time
-                # Start from 2022 to align all assets
+                dtformat=('%Y-%m-%d %H:%M:%S'),
+                # Start 4h from 2022 to align the actual trading period
                 fromdate=datetime.datetime(2022, 1, 1),
             )
-            cerebro.adddata(data)
+            # Add 4h data first so it acts as the master clock, executing next() every 4 hours
+            cerebro.adddata(data_4h)
         except Exception as e:
-            print(f"Skipping {sym} data feed due to error: {e}")
+            print(f"Skipping {sym} 4h data feed due to error: {e}")
+            continue
+
+        # Add Daily Data (for Macro Trend Filter)
+        try:
+            data_1d = bt.feeds.GenericCSVData(
+                dataname=f'data/{sym}_1d.csv',
+                name=f'{sym}_1d', # Name the data feed so the strategy knows which is which
+                datetime=0,
+                open=1,
+                high=2,
+                low=3,
+                close=4,
+                volume=5,
+                openinterest=-1,
+                dtformat=('%Y-%m-%d'),
+                # Need a longer lookback for the 200 SMA on daily timeframe. Let's start from 2021.
+                fromdate=datetime.datetime(2021, 1, 1),
+            )
+            cerebro.adddata(data_1d)
+        except Exception as e:
+            print(f"Skipping {sym} 1d data feed due to error: {e}")
 
     # 3. Add the Strategy with Asset-Specific Optimized Parameters
     # We pass the best Fast/Slow EMA combinations found by our optimizer for the Elite 4 assets
