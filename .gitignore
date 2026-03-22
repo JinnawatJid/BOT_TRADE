@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Output artifacts
+backtest_result.png
+data/BTC_USDT_1d.csv
+
+# Virtual environment
+venv/
+env/
+.env
+
+# Backtrader and other temp files
+.pytest_cache/
