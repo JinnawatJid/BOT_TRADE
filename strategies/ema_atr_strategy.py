@@ -13,6 +13,7 @@ class EmaAtrStrategy(bt.Strategy):
 
         ('atr_period', 14),
         ('atr_multiplier', 2.0),
+        ('breakeven_atr_multiplier', 1.0), # Move SL to entry if profit hits 1.0x ATR
         ('risk_per_trade_pct', 0.95), # Will allocate this total percentage across all assets (Equal Weight Cash Allocation)
         ('printlog', True),           # Flag to toggle logging off during optimization
     )
@@ -22,53 +23,34 @@ class EmaAtrStrategy(bt.Strategy):
         self.inds = dict()
         self.orders = dict()
         self.stop_loss_prices = dict()
+        self.entry_prices = dict()
 
-        # We need to separate 4h feeds (for trading) and 1d feeds (for regime filter)
-        self.daily_smas = dict()
-        self.daily_data = dict()
-
-        # First pass to identify daily feeds and calculate 200 SMA
         for d in self.datas:
-            if d._name.endswith('_1d'):
-                # Calculate 200 SMA on the daily feed
-                sma200 = bt.indicators.SimpleMovingAverage(d, period=200)
-                sma200.plotinfo.plot = False
+            self.orders[d] = None
+            self.stop_loss_prices[d] = None
+            self.entry_prices[d] = None
 
-                # We extract the base symbol (e.g., 'BTC_USDT')
-                base_symbol = d._name.replace('_1d', '')
-                self.daily_smas[base_symbol] = sma200
-                self.daily_data[base_symbol] = d
+            # Determine parameters for this specific asset
+            fast_p, slow_p = self.params.asset_parameters.get(d._name, self.params.default_periods)
 
-        # Second pass to setup 4h feeds
-        for d in self.datas:
-            if d._name.endswith('_4h'):
-                self.orders[d] = None
-                self.stop_loss_prices[d] = None
+            # Indicators per feed
+            fast_ema = bt.indicators.ExponentialMovingAverage(d, period=fast_p)
+            slow_ema = bt.indicators.ExponentialMovingAverage(d, period=slow_p)
 
-                # Determine parameters for this specific asset
-                fast_p, slow_p = self.params.asset_parameters.get(d._name, self.params.default_periods)
+            atr = bt.indicators.AverageTrueRange(d, period=self.params.atr_period)
+            atr.plotinfo.plot = False
 
-                # Indicators per feed
-                fast_ema = bt.indicators.ExponentialMovingAverage(d, period=fast_p)
-                slow_ema = bt.indicators.ExponentialMovingAverage(d, period=slow_p)
+            crossover = bt.indicators.CrossOver(fast_ema, slow_ema)
+            crossover.plotinfo.plot = False
 
-                atr = bt.indicators.AverageTrueRange(d, period=self.params.atr_period)
-                atr.plotinfo.plot = False
-
-                crossover = bt.indicators.CrossOver(fast_ema, slow_ema)
-                crossover.plotinfo.plot = False
-
-                base_symbol = d._name.replace('_4h', '')
-
-                # Store in dict
-                self.inds[d] = {
-                    'fast_ema': fast_ema,
-                    'slow_ema': slow_ema,
-                    'atr': atr,
-                    'crossover': crossover,
-                    'slow_p': slow_p, # Save this for minimum bar checks
-                    'base_symbol': base_symbol
-                }
+            # Store in dict
+            self.inds[d] = {
+                'fast_ema': fast_ema,
+                'slow_ema': slow_ema,
+                'atr': atr,
+                'crossover': crossover,
+                'slow_p': slow_p # Save this for minimum bar checks
+            }
 
     def notify_order(self, order):
         if order.status in [order.Submitted, order.Accepted]:
@@ -80,6 +62,9 @@ class EmaAtrStrategy(bt.Strategy):
             if order.isbuy():
                 self.log(f'BUY EXECUTED [{d._name}], Price: {order.executed.price:.2f}, Cost: {order.executed.value:.2f}, Comm {order.executed.comm:.2f}', dt=d.datetime.date(0))
 
+                # Capture execution price for breakeven calculation
+                self.entry_prices[d] = order.executed.price
+
                 # Initial Stop Loss
                 atr = self.inds[d]['atr'][0]
                 self.stop_loss_prices[d] = order.executed.price - (atr * self.params.atr_multiplier)
@@ -88,6 +73,7 @@ class EmaAtrStrategy(bt.Strategy):
             else:  # Sell
                 self.log(f'SELL EXECUTED [{d._name}], Price: {order.executed.price:.2f}, Cost: {order.executed.value:.2f}, Comm {order.executed.comm:.2f}', dt=d.datetime.date(0))
                 self.stop_loss_prices[d] = None
+                self.entry_prices[d] = None
 
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
             self.log(f'Order Canceled/Margin/Rejected [{d._name}]', dt=d.datetime.date(0))
@@ -107,21 +93,11 @@ class EmaAtrStrategy(bt.Strategy):
             print('%s, %s' % (dt.isoformat(), txt))
 
     def next(self):
-        # We only want to process the 4h data feeds for trading logic
-        # Count only the 4h feeds for the equal weight allocation
-        trading_assets = [d for d in self.datas if d._name.endswith('_4h')]
-        num_assets = len(trading_assets)
+        # In a portfolio, we loop through all available data feeds
+        num_assets = len(self.datas)
 
-        for d in trading_assets:
+        for d in self.datas:
             ind = self.inds[d]
-            base_symbol = ind['base_symbol']
-
-            # Make sure we have enough daily data for the 200 SMA
-            daily_data_feed = self.daily_data.get(base_symbol)
-            daily_sma = self.daily_smas.get(base_symbol)
-
-            if daily_data_feed is None or daily_sma is None or len(daily_sma) < 200:
-                continue
 
             # Skip if data is not mature enough yet for this specific asset's slow EMA
             if len(d) < ind['slow_p']:
@@ -136,38 +112,38 @@ class EmaAtrStrategy(bt.Strategy):
             if not pos:
                 # We are NOT in the market for this asset
                 if ind['crossover'][0] > 0:
+                    self.log(f'BUY CREATE [{d._name}], Price: {d.close[0]:.2f}', dt=d.datetime.date(0))
 
-                    # --- Multi-Timeframe Regime Filter ---
-                    # To avoid lookahead bias, we must check the LAST CLOSED daily bar (-1)
-                    # rather than the currently building daily bar (0) which we wouldn't know intra-day.
-                    last_daily_close = daily_data_feed.close[-1]
-                    last_daily_sma = daily_sma[-1]
+                    # Portfolio Position Sizing (Equal Weight Cash Allocation):
+                    # We allocate equal weight to each asset based on available total equity.
+                    # E.g., if total risk is 95% and we have 4 assets, each asset gets ~23.75% of TOTAL equity.
+                    total_equity = self.broker.getvalue()
+                    allocation_per_asset = (total_equity * self.params.risk_per_trade_pct) / num_assets
 
-                    if last_daily_close > last_daily_sma:
-                        self.log(f'BUY CREATE [{d._name}], Price: {d.close[0]:.2f} (Daily Regime Filter Passed: Close {last_daily_close:.2f} > SMA {last_daily_sma:.2f})', dt=d.datetime.date(0))
+                    # Ensure we have enough actual cash before buying
+                    cash = self.broker.get_cash()
+                    target_value = min(allocation_per_asset, cash)
 
-                        # Portfolio Position Sizing (Equal Weight Cash Allocation):
-                        # We allocate equal weight to each asset based on available total equity.
-                        total_equity = self.broker.getvalue()
-                        allocation_per_asset = (total_equity * self.params.risk_per_trade_pct) / num_assets
+                    size = target_value / d.close[0]
 
-                        # Ensure we have enough actual cash before buying
-                        cash = self.broker.get_cash()
-                        target_value = min(allocation_per_asset, cash)
-
-                        size = target_value / d.close[0]
-
-                        if size > 0:
-                            self.orders[d] = self.buy(data=d, size=size)
-                        else:
-                            self.log(f'Not enough cash to buy [{d._name}]', dt=d.datetime.date(0))
+                    if size > 0:
+                        self.orders[d] = self.buy(data=d, size=size)
                     else:
-                        self.log(f'BUY BLOCKED [{d._name}] - Daily Regime Filter Failed (Close {last_daily_close:.2f} <= SMA {last_daily_sma:.2f})', dt=d.datetime.date(0))
+                        self.log(f'Not enough cash to buy [{d._name}]', dt=d.datetime.date(0))
 
             else:
                 # We ARE in the market for this asset
 
-                # 1. Update Trailing Stop Loss
+                # 1. Breakeven Stop Check
+                if self.entry_prices[d] is not None:
+                    breakeven_trigger = self.entry_prices[d] + (ind['atr'][0] * self.params.breakeven_atr_multiplier)
+
+                    # If current price exceeds our profit trigger, AND our stop loss is still below entry price, move it to entry
+                    if d.close[0] >= breakeven_trigger and self.stop_loss_prices[d] < self.entry_prices[d]:
+                        self.stop_loss_prices[d] = self.entry_prices[d]
+                        self.log(f'BREAKEVEN TRIGGERED [{d._name}]: Price {d.close[0]:.2f} > {breakeven_trigger:.2f}. Stop Loss moved to Entry {self.entry_prices[d]:.2f}', dt=d.datetime.date(0))
+
+                # 2. Update Standard Trailing Stop Loss (Only move it up, never down)
                 new_stop_loss = d.close[0] - (ind['atr'][0] * self.params.atr_multiplier)
 
                 if self.stop_loss_prices[d] is None:
@@ -175,7 +151,7 @@ class EmaAtrStrategy(bt.Strategy):
                 elif new_stop_loss > self.stop_loss_prices[d]:
                     self.stop_loss_prices[d] = new_stop_loss
 
-                # 2. Check for Exit Signals
+                # 3. Check for Exit Signals
                 if d.close[0] < self.stop_loss_prices[d]:
                     self.log(f'STOP LOSS HIT [{d._name}]: Close {d.close[0]:.2f} < SL {self.stop_loss_prices[d]:.2f}. SELL CREATE.', dt=d.datetime.date(0))
                     self.orders[d] = self.sell(data=d, size=pos.size)

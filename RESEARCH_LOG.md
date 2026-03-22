@@ -268,3 +268,22 @@ To maintain consistency and rigorous scientific standards across all future expe
     *   **Sharpe Ratio:** -0.07
     *   **Final Portfolio Value / ROI:** $10,179 (+1.79%)
 *   **Conclusion & Next Steps:** The hypothesis failed spectacularly. Adding the Daily 200 SMA Regime Filter effectively cut the Trade Count in half (from 162 down to 78) and significantly lowered the Win Rate (from 45% down to 33.3%). The Sharpe Ratio completely collapsed from 0.866 to negative -0.07, and total ROI dropped from +62.7% to practically breakeven (+1.79%). The Max Drawdown even increased slightly to 14.35%. The regime filter proved to be *too restrictive* and lagging; by the time the daily close definitively broke above the 200 SMA, the 4h trend was often already exhausted, leading to late entries that quickly reversed into stop losses. This reaffirms that our trailing stop loss is already doing the heavy lifting, and trying to over-filter entries with lagging higher-timeframe macro indicators destroys Alpha in crypto trend following.
+
+---
+
+## Experiment 13: Breakeven Stop Management (1.0x ATR)
+**Date:** Post-Regime Filter Pivot
+**Strategy:** EMA Crossover + ATR Trailing Stop + Breakeven Stop Trigger
+**Parameters:** Optimized per asset (BTC: 50/110, ETH: 40/50, SOL: 40/170, BNB: 30/170)
+**Position Sizing:** Equal Weight Cash Allocation (95% of total equity divided evenly among 4 assets = ~23.75% allocation per trade)
+**Assets Traded:** "Elite 4" Basket: BTC, ETH, SOL, BNB (4h Timeframe Execution)
+
+*   **Hypothesis/Logic:** Following the failure of the lagging entry filter in Experiment 12, we pivot to optimizing the *exit* logic. We introduced a Breakeven Stop Trigger: once a trade moves into profit by a distance of 1.0x ATR, the stop loss instantly moves up to the original Entry Price. The goal is to protect capital on trades that start well but quickly reverse (whipsaws), thereby boosting the Win Rate and Sharpe Ratio without reducing the total trade count.
+*   **Results:**
+    *   **Total Trades:** 162
+    *   **Win Rate:** 46.91% (76 won, 86 lost)
+    *   **Profit Factor:** 1.70
+    *   **Max Drawdown:** 10.39%
+    *   **Sharpe Ratio:** 0.932
+    *   **Final Portfolio Value / ROI:** $17,140 (+71.4%)
+*   **Conclusion & Next Steps:** The hypothesis was a massive success. The Trade Count remained identical to our baseline (162 trades). However, the Win Rate jumped from 45.06% to nearly 47%, the Profit Factor increased to 1.70, and the Sharpe Ratio hit a stellar 0.932. Importantly, the Max Drawdown was pushed even lower, down to an incredibly safe 10.39%. This experiment proves that in crypto trend following, actively managing the downside of trades that initially break out but fail to sustain momentum is a superior method for generating Alpha compared to filtering entries. This Breakeven Stop model is our new production standard.
