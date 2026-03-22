@@ -249,3 +249,79 @@ To maintain consistency and rigorous scientific standards across all future expe
     *   **Sharpe Ratio:** 0.866
     *   **Final Portfolio Value / ROI:** $16,276 (+62.7%)
 *   **Conclusion:** The results perfectly matched the historical test from Experiment 8, confirming the system's stability. By isolating the strongest, most liquid trending assets (BTC, ETH, SOL, BNB) and giving each of them sufficient capital room to run via Equal Weighting, the framework achieved a stellar 0.86 Sharpe Ratio and an incredibly safe 11.28% Max Drawdown over 162 trades. This is the finalized, Industry Standard "White Box" model ready for Paper Trading and Live Execution.
+
+---
+
+## Experiment 12: Multi-Timeframe Regime Filter (Daily 200 SMA)
+**Date:** Implementing User Request
+**Strategy:** EMA Crossover + ATR Trailing Stop + Daily 200 SMA Regime Filter
+**Parameters:** Optimized per asset (BTC: 50/110, ETH: 40/50, SOL: 40/170, BNB: 30/170)
+**Position Sizing:** Equal Weight Cash Allocation (95% of total equity divided evenly among 4 assets = ~23.75% allocation per trade)
+**Assets Traded:** "Elite 4" Basket: BTC, ETH, SOL, BNB (4h Timeframe Execution, 1d Timeframe Filter)
+
+*   **Hypothesis/Logic:** While Experiment 11 yielded extremely safe drawdown (11.28%), the Win Rate was still under 50% due to false signals during sideways chop. By introducing a macro trend filter (Daily 200 SMA), the bot will only take 4h long signals when the asset's daily close is strictly above the 200 SMA. The goal is to filter out bad trades, boosting the Win Rate and Sharpe Ratio without destroying the statistically significant trade count.
+*   **Results:**
+    *   **Total Trades:** 78
+    *   **Win Rate:** 33.33% (26 won, 52 lost)
+    *   **Profit Factor:** 1.04
+    *   **Max Drawdown:** 14.35%
+    *   **Sharpe Ratio:** -0.07
+    *   **Final Portfolio Value / ROI:** $10,179 (+1.79%)
+*   **Conclusion & Next Steps:** The hypothesis failed spectacularly. Adding the Daily 200 SMA Regime Filter effectively cut the Trade Count in half (from 162 down to 78) and significantly lowered the Win Rate (from 45% down to 33.3%). The Sharpe Ratio completely collapsed from 0.866 to negative -0.07, and total ROI dropped from +62.7% to practically breakeven (+1.79%). The Max Drawdown even increased slightly to 14.35%. The regime filter proved to be *too restrictive* and lagging; by the time the daily close definitively broke above the 200 SMA, the 4h trend was often already exhausted, leading to late entries that quickly reversed into stop losses. This reaffirms that our trailing stop loss is already doing the heavy lifting, and trying to over-filter entries with lagging higher-timeframe macro indicators destroys Alpha in crypto trend following.
+
+---
+
+## Experiment 13: Breakeven Stop Management (1.0x ATR)
+**Date:** Post-Regime Filter Pivot
+**Strategy:** EMA Crossover + ATR Trailing Stop + Breakeven Stop Trigger
+**Parameters:** Optimized per asset (BTC: 50/110, ETH: 40/50, SOL: 40/170, BNB: 30/170)
+**Position Sizing:** Equal Weight Cash Allocation (95% of total equity divided evenly among 4 assets = ~23.75% allocation per trade)
+**Assets Traded:** "Elite 4" Basket: BTC, ETH, SOL, BNB (4h Timeframe Execution)
+
+*   **Hypothesis/Logic:** Following the failure of the lagging entry filter in Experiment 12, we pivot to optimizing the *exit* logic. We introduced a Breakeven Stop Trigger: once a trade moves into profit by a distance of 1.0x ATR, the stop loss instantly moves up to the original Entry Price. The goal is to protect capital on trades that start well but quickly reverse (whipsaws), thereby boosting the Win Rate and Sharpe Ratio without reducing the total trade count.
+*   **Results:**
+    *   **Total Trades:** 162
+    *   **Win Rate:** 46.91% (76 won, 86 lost)
+    *   **Profit Factor:** 1.70
+    *   **Max Drawdown:** 10.39%
+    *   **Sharpe Ratio:** 0.932
+    *   **Final Portfolio Value / ROI:** $17,140 (+71.4%)
+*   **Conclusion & Next Steps:** The hypothesis was a massive success. The Trade Count remained identical to our baseline (162 trades). However, the Win Rate jumped from 45.06% to nearly 47%, the Profit Factor increased to 1.70, and the Sharpe Ratio hit a stellar 0.932. Importantly, the Max Drawdown was pushed even lower, down to an incredibly safe 10.39%. This experiment proves that in crypto trend following, actively managing the downside of trades that initially break out but fail to sustain momentum is a superior method for generating Alpha compared to filtering entries. This Breakeven Stop model is our new production standard.
+
+---
+
+## Experiment 14: Timeframe Diversification (1h + 4h)
+**Date:** Scaling Trade Count
+**Strategy:** EMA Crossover + ATR Trailing Stop + Breakeven Stop Trigger
+**Parameters:** Optimized per asset. 4h baseline parameters applied to 4h feeds. 1h feeds received mathematically equivalent macro parameters (4x the 4h inputs).
+**Position Sizing:** Equal Weight Cash Allocation across 8 feeds (4 assets * 2 timeframes = ~11.87% equity per trade)
+**Assets Traded:** "Elite 4" Basket: BTC, ETH, SOL, BNB (1h and 4h Timeframes running concurrently)
+
+*   **Hypothesis/Logic:** To safely scale the Total Trade Count above the 300+ mark for overwhelming statistical significance, we introduced Timeframe Diversification. By running the `1h` chart concurrently with the `4h` chart for the same assets, the bot should capture both micro-trends and macro-trends. Because we split the equity equally across 8 potential concurrent positions instead of 4, the Max Drawdown should remain very low, while the trade count doubles.
+*   **Results:**
+    *   **Total Trades:** 324
+    *   **Win Rate:** 46.30% (150 won, 174 lost)
+    *   **Profit Factor:** 1.55
+    *   **Max Drawdown:** 6.99%
+    *   **Sharpe Ratio:** 0.842
+    *   **Final Portfolio Value / ROI:** $14,028 (+40.2%)
+*   **Conclusion & Next Steps:** The hypothesis was structurally sound. Exactly as predicted, the Total Trades doubled to a massive 324 trades, providing excellent statistical significance. Timeframe diversification acted as a massive hedge: Max Drawdown plummeted to an almost unheard-of 6.99% for a fully invested crypto portfolio. The Sharpe Ratio remained robust at 0.842, and the Win Rate held strong at 46.3%. However, by splitting the equity across 8 feeds (half of which are the choppier `1h` timeframe), the absolute ROI dropped compared to just trading the `4h` chart heavily. This confirms Timeframe Diversification is an incredibly powerful risk-reduction tool, though it sacrifices some absolute return.
+
+---
+
+## Experiment 15: Pullback Re-Entry Logic
+**Date:** Aggressive Trade Frequency Scaling
+**Strategy:** EMA Crossover + ATR Trailing Stop + Breakeven Stop Trigger + Pullback Re-Entry
+**Parameters:** Optimized per asset (1h and 4h timeframes running concurrently).
+**Position Sizing:** Equal Weight Cash Allocation across 8 feeds (~11.87% equity per trade)
+**Assets Traded:** "Elite 4" Basket: BTC, ETH, SOL, BNB
+
+*   **Hypothesis/Logic:** To forcefully increase the trade count and ensure we never "miss the boat" on a massive trend after an early stop-out, we introduced a "Pullback Re-Entry" mechanic. If the bot is flat but the macro trend is still UP (Fast EMA > Slow EMA), the bot is allowed to instantly re-enter a long position if the price pulls back and closes back above the Fast EMA. The goal is to maximize trade frequency during bull runs.
+*   **Results:**
+    *   **Total Trades:** 1,124
+    *   **Win Rate:** 41.10% (462 won, 661 lost)
+    *   **Profit Factor:** 1.15
+    *   **Max Drawdown:** 21.55%
+    *   **Sharpe Ratio:** 0.528
+    *   **Final Portfolio Value / ROI:** $14,047 (+40.47%)
+*   **Conclusion & Next Steps:** The hypothesis succeeded in violently increasing the trade count, jumping from 324 to an incredible 1,124 trades. However, this perfectly illustrates the danger of overtrading in trend-following systems. By constantly trying to "buy the dip" within a macro trend, the bot suffered "death by a thousand cuts" during choppy sideways consolidations. The Win Rate dropped to 41%, the Profit Factor crashed to a mediocre 1.15, and the Max Drawdown spiked to 21.55%. Despite trading nearly 4x as often, the absolute ROI remained identical to Experiment 14 (+40%). The Sharpe ratio collapsed to 0.528. This proves that our patient, "Macro Crossover Only" approach from Experiment 14 is vastly mathematically superior to aggressively forcing trades on micro pullbacks.

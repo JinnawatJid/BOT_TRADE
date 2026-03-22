@@ -12,11 +12,11 @@ def run_optimizer(symbol='BTC_USDT'):
     # or let it default if your system handles it well. We'll use 1 for stability here.
     cerebro = bt.Cerebro(maxcpus=1, optreturn=False)
 
-    # 2. Add the Data Feed (Focusing on specific asset for optimization on 4h timeframe)
+    # 2. Add the Data Feed (Focusing on specific asset for optimization on 1h timeframe)
     # Using full history to get better backtest coverage
     data = bt.feeds.GenericCSVData(
-        dataname=f'data/{symbol}_4h.csv',
-        name=f'{symbol}_4h',
+        dataname=f'data/{symbol}_1h.csv',
+        name=f'{symbol}_1h',
         datetime=0,
         open=1,
         high=2,
@@ -24,26 +24,24 @@ def run_optimizer(symbol='BTC_USDT'):
         close=4,
         volume=5,
         openinterest=-1,
-        dtformat=('%Y-%m-%d %H:%M:%S'), # 4h format includes time
+        dtformat=('%Y-%m-%d %H:%M:%S'), # 1h format includes time
     )
     cerebro.adddata(data)
 
-    # 3. Add the Strategy with Optimization Parameters for 4h Timeframe
-    print("Sweeping Fast EMA: 10 to 50 (step 10)")
-    print("Sweeping Slow EMA: 50 to 200 (step 30)")
+    # 3. Add the Strategy with Optimization Parameters for 1h Timeframe
+    print("Sweeping Fast EMA: 20 to 120 (step 20)")
+    print("Sweeping Slow EMA: 100 to 400 (step 50)")
 
-    # To adapt the optimizer to the new `asset_parameters` dictionary logic,
-    # we just need to pass `default_periods` so the optstrategy sweeps through pairs.
+    # The 1h timeframe has 4x as many candles as the 4h timeframe.
+    # We sweep a broader range to find the optimal macro trend filter on the micro timeframe.
     cerebro.optstrategy(
         EmaAtrStrategy,
-        default_periods=[(f, s) for f in range(10, 51, 10) for s in range(50, 201, 30)],
-        # Keep others constant for this test.
-        # Ensure we are simulating an ALL-IN strategy on a SINGLE asset for optimization
-        # (Since we are passing 1 asset, 0.95 means 95% allocation)
+        default_periods=[(f, s) for f in range(20, 121, 20) for s in range(100, 401, 50)],
         atr_period=14,
         atr_multiplier=2.0,
+        breakeven_atr_multiplier=1.0, # Using our new breakeven logic from Exp 13
         risk_per_trade_pct=0.95,
-        printlog=False # Disable verbose logs for speed and clarity
+        printlog=False
     )
 
     # 4. Set Broker parameters
@@ -120,9 +118,9 @@ def run_optimizer(symbol='BTC_USDT'):
     print("\n" + "="*95 + "\n")
 
 if __name__ == '__main__':
-    # Optionally accept symbol from command line, otherwise run all 10 assets
+    # Optimize specifically for the Elite 4 on 1h timeframe
     if len(sys.argv) > 1:
         run_optimizer(sys.argv[1])
     else:
-        for sym in ['BTC_USDT', 'ETH_USDT', 'SOL_USDT', 'BNB_USDT', 'XRP_USDT', 'ADA_USDT', 'DOGE_USDT', 'DOT_USDT', 'LINK_USDT', 'AVAX_USDT']:
+        for sym in ['BTC_USDT', 'ETH_USDT', 'SOL_USDT', 'BNB_USDT']:
             run_optimizer(sym)

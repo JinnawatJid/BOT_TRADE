@@ -13,6 +13,7 @@ class EmaAtrStrategy(bt.Strategy):
 
         ('atr_period', 14),
         ('atr_multiplier', 2.0),
+        ('breakeven_atr_multiplier', 1.0), # Move SL to entry if profit hits 1.0x ATR
         ('risk_per_trade_pct', 0.95), # Will allocate this total percentage across all assets (Equal Weight Cash Allocation)
         ('printlog', True),           # Flag to toggle logging off during optimization
     )
@@ -22,10 +23,12 @@ class EmaAtrStrategy(bt.Strategy):
         self.inds = dict()
         self.orders = dict()
         self.stop_loss_prices = dict()
+        self.entry_prices = dict()
 
         for d in self.datas:
             self.orders[d] = None
             self.stop_loss_prices[d] = None
+            self.entry_prices[d] = None
 
             # Determine parameters for this specific asset
             fast_p, slow_p = self.params.asset_parameters.get(d._name, self.params.default_periods)
@@ -59,6 +62,9 @@ class EmaAtrStrategy(bt.Strategy):
             if order.isbuy():
                 self.log(f'BUY EXECUTED [{d._name}], Price: {order.executed.price:.2f}, Cost: {order.executed.value:.2f}, Comm {order.executed.comm:.2f}', dt=d.datetime.date(0))
 
+                # Capture execution price for breakeven calculation
+                self.entry_prices[d] = order.executed.price
+
                 # Initial Stop Loss
                 atr = self.inds[d]['atr'][0]
                 self.stop_loss_prices[d] = order.executed.price - (atr * self.params.atr_multiplier)
@@ -67,6 +73,7 @@ class EmaAtrStrategy(bt.Strategy):
             else:  # Sell
                 self.log(f'SELL EXECUTED [{d._name}], Price: {order.executed.price:.2f}, Cost: {order.executed.value:.2f}, Comm {order.executed.comm:.2f}', dt=d.datetime.date(0))
                 self.stop_loss_prices[d] = None
+                self.entry_prices[d] = None
 
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
             self.log(f'Order Canceled/Margin/Rejected [{d._name}]', dt=d.datetime.date(0))
@@ -109,7 +116,7 @@ class EmaAtrStrategy(bt.Strategy):
 
                     # Portfolio Position Sizing (Equal Weight Cash Allocation):
                     # We allocate equal weight to each asset based on available total equity.
-                    # E.g., if total risk is 95% and we have 4 assets, each asset gets ~23.75% of TOTAL equity.
+                    # E.g., if total risk is 95% and we have 8 assets (4 coins * 2 timeframes), each gets ~11.87%
                     total_equity = self.broker.getvalue()
                     allocation_per_asset = (total_equity * self.params.risk_per_trade_pct) / num_assets
 
@@ -127,7 +134,16 @@ class EmaAtrStrategy(bt.Strategy):
             else:
                 # We ARE in the market for this asset
 
-                # 1. Update Trailing Stop Loss
+                # 1. Breakeven Stop Check
+                if self.entry_prices[d] is not None:
+                    breakeven_trigger = self.entry_prices[d] + (ind['atr'][0] * self.params.breakeven_atr_multiplier)
+
+                    # If current price exceeds our profit trigger, AND our stop loss is still below entry price, move it to entry
+                    if d.close[0] >= breakeven_trigger and self.stop_loss_prices[d] < self.entry_prices[d]:
+                        self.stop_loss_prices[d] = self.entry_prices[d]
+                        self.log(f'BREAKEVEN TRIGGERED [{d._name}]: Price {d.close[0]:.2f} > {breakeven_trigger:.2f}. Stop Loss moved to Entry {self.entry_prices[d]:.2f}', dt=d.datetime.date(0))
+
+                # 2. Update Standard Trailing Stop Loss (Only move it up, never down)
                 new_stop_loss = d.close[0] - (ind['atr'][0] * self.params.atr_multiplier)
 
                 if self.stop_loss_prices[d] is None:
@@ -135,7 +151,7 @@ class EmaAtrStrategy(bt.Strategy):
                 elif new_stop_loss > self.stop_loss_prices[d]:
                     self.stop_loss_prices[d] = new_stop_loss
 
-                # 2. Check for Exit Signals
+                # 3. Check for Exit Signals
                 if d.close[0] < self.stop_loss_prices[d]:
                     self.log(f'STOP LOSS HIT [{d._name}]: Close {d.close[0]:.2f} < SL {self.stop_loss_prices[d]:.2f}. SELL CREATE.', dt=d.datetime.date(0))
                     self.orders[d] = self.sell(data=d, size=pos.size)
